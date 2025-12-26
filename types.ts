@@ -33,6 +33,7 @@ export interface ClaimData {
   schemeEndDate: string;
   claimDetails: string;
   additionalFields?: CustomField[];
+  claimMadeBy?: string; 
 }
 
 export interface ModelOption {

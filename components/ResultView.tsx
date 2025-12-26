@@ -8,8 +8,35 @@ interface ResultViewProps {
   onReset: () => void;
 }
 
+const CLAIM_MADE_BY_OPTIONS = [
+  "ANKIT (LG)",
+  "Ajay Rathore (BPL)",
+  "Arif (GODREJ)",
+  "Atiksha Ji",
+  "Bhaskar Mishra (VOLTAS)",
+  "Bhawani Singh (liebhrr)",
+  "Bhawani Singh Sisodiya (LIEBHERR)",
+  "Mahender Singh (Samsung)",
+  "Manisha Chouhan",
+  "Mohan Kumar (Bosch)",
+  "Mohsin Khan",
+  "Mukesh Dholi (BOSCH)",
+  "Pradeep sawami (OPPO)",
+  "Praveen Khichi",
+  "Rahul Singadiya (LIEBHERR)",
+  "Ram Ganesh",
+  "Sadhana Chundawat",
+  "Seema Saxena",
+  "Sunil Hunsaliya (TCL)",
+  "Sunita Kumari (CROMPTON)",
+  "Suresh Singh (Apple)",
+  "Yudhister Ji (LIEBHERR)"
+];
+
+
+
 const CLAIM_TYPES: ClaimType[] = [
-  'General Information', 'Price Drop', 'Price List', 'Monthly Scheme', 
+  'General Information', 'Price Drop', 'Price List', 'Monthly Scheme',
   'Goods Return', 'Target Scheme', 'DOA', 'Other'
 ];
 
@@ -64,11 +91,12 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
   const handleSubmit = async () => {
     setSubmitting(true);
     setSubmitError(null);
-    
+
     try {
       // NOTE: Replace this URL with your actual backend API endpoint
-      const API_ENDPOINT = 'https://elec-zoho-backend.vercel.app/api/claims'; 
-      
+      const API_ENDPOINT = 'https://elec-zoho-backend.vercel.app/api/claims';
+      // const API_ENDPOINT = 'http://localhost:5000/api/claims';
+
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -115,7 +143,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
             <p className="text-gray-500 mb-8 text-sm leading-relaxed">
               The extracted claim data has been successfully sent to your API for processing.
             </p>
-            <button 
+            <button
               onClick={onReset}
               className="w-full py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-black transition-colors shadow-lg active:scale-95"
             >
@@ -131,21 +159,20 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
           <p className="text-gray-500 text-sm font-medium">Reviewing: <span className="text-blue-600 italic">{file.fileName}</span></p>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={copyJSON}
-            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all tracking-widest ${
-              copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-            }`}
+            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all tracking-widest ${copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
           >
             {copied ? 'JSON COPIED' : 'COPY JSON'}
           </button>
-          <button 
+          <button
             onClick={onReset}
             className="px-6 py-2.5 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors text-sm"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={handleSubmit}
             disabled={submitting}
             className={`px-8 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100 text-sm flex items-center gap-2 ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
@@ -173,14 +200,14 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
           <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Source View</h3>
           <div className="bg-white p-2 rounded-2xl border border-gray-200 shadow-sm sticky top-24 min-h-[400px] flex items-center justify-center overflow-hidden">
             {isImage ? (
-              <img 
-                src={file.previewUrl} 
-                alt="Source" 
+              <img
+                src={file.previewUrl}
+                alt="Source"
                 className="w-full h-auto rounded-lg object-contain max-h-[70vh]"
               />
             ) : isPdf ? (
-              <iframe 
-                src={file.previewUrl} 
+              <iframe
+                src={file.previewUrl}
                 className="w-full h-[70vh] rounded-lg"
                 title="PDF Preview"
               />
@@ -205,29 +232,29 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
               <span className="text-sm font-bold text-gray-700">Claim Details</span>
               <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase">Editable Fields</span>
             </div>
-            
+
             <div className="p-6 space-y-5">
               {/* Mandatory Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField 
-                  label="Supplier Name *" 
-                  value={data.supplierName} 
-                  onChange={(v) => handleFieldChange('supplierName', v)} 
+                <FormField
+                  label="Supplier Name *"
+                  value={data.supplierName}
+                  onChange={(v) => handleFieldChange('supplierName', v)}
                   placeholder="Extracted supplier..."
                 />
-                <FormField 
-                  label="Vendor Name" 
-                  value={data.vendorName} 
-                  onChange={(v) => handleFieldChange('vendorName', v)} 
+                <FormField
+                  label="Vendor Name"
+                  value={data.vendorName}
+                  onChange={(v) => handleFieldChange('vendorName', v)}
                 />
-                <FormField 
-                  label="Company/Brand Name" 
-                  value={data.companyBrandName} 
-                  onChange={(v) => handleFieldChange('companyBrandName', v)} 
+                <FormField
+                  label="Company/Brand Name"
+                  value={data.companyBrandName}
+                  onChange={(v) => handleFieldChange('companyBrandName', v)}
                 />
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Claim Type</label>
-                  <select 
+                  <select
                     value={data.claimType}
                     onChange={(e) => handleFieldChange('claimType', e.target.value as ClaimType)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -237,7 +264,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Scheme Type</label>
-                  <select 
+                  <select
                     value={data.schemeType}
                     onChange={(e) => handleFieldChange('schemeType', e.target.value)}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -246,23 +273,23 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                     {SCHEME_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-                <FormField 
-                  label="Scheme Start Date" 
+                <FormField
+                  label="Scheme Start Date"
                   type="date"
-                  value={data.schemeStartDate} 
-                  onChange={(v) => handleFieldChange('schemeStartDate', v)} 
+                  value={data.schemeStartDate}
+                  onChange={(v) => handleFieldChange('schemeStartDate', v)}
                 />
-                <FormField 
-                  label="Scheme End Date" 
+                <FormField
+                  label="Scheme End Date"
                   type="date"
-                  value={data.schemeEndDate} 
-                  onChange={(v) => handleFieldChange('schemeEndDate', v)} 
+                  value={data.schemeEndDate}
+                  onChange={(v) => handleFieldChange('schemeEndDate', v)}
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Claim Details</label>
-                <textarea 
+                <textarea
                   value={data.claimDetails}
                   onChange={(e) => handleFieldChange('claimDetails', e.target.value)}
                   rows={4}
@@ -270,6 +297,25 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                   placeholder="Describe the claim extracted from the document..."
                 />
               </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">
+                  Claim Made By
+                </label>
+                <select
+                  value={data.claimMadeBy || ""}
+                  onChange={(e) => handleFieldChange("claimMadeBy", e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                >
+                  <option value="">- Select -</option>
+                  {CLAIM_MADE_BY_OPTIONS.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
 
               {/* Custom Fields Section */}
               {data.additionalFields && data.additionalFields.length > 0 && (
@@ -279,13 +325,13 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                     {data.additionalFields.map((field) => (
                       <div key={field.id} className="flex gap-2 items-end">
                         <div className="flex-1">
-                          <FormField 
-                            label={field.label} 
-                            value={field.value} 
-                            onChange={(v) => handleCustomFieldChange(field.id, v)} 
+                          <FormField
+                            label={field.label}
+                            value={field.value}
+                            onChange={(v) => handleCustomFieldChange(field.id, v)}
                           />
                         </div>
-                        <button 
+                        <button
                           onClick={() => deleteField(field.id)}
                           className="p-3 text-gray-400 hover:text-red-500 transition-colors"
                         >
@@ -297,7 +343,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                 </div>
               )}
 
-              <button 
+              <button
                 onClick={addField}
                 className="w-full py-3.5 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 text-xs font-bold hover:border-blue-400 hover:text-blue-600 transition-all flex items-center justify-center gap-2 tracking-widest"
               >
@@ -306,10 +352,10 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
               </button>
             </div>
           </div>
-          
+
           {/* Bottom Submit Button */}
           <div className="pt-2">
-            <button 
+            <button
               onClick={handleSubmit}
               disabled={submitting}
               className={`w-full py-5 bg-blue-600 text-white font-extrabold rounded-3xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3 text-lg uppercase tracking-wider active:scale-[0.98] ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
@@ -346,14 +392,13 @@ interface FormFieldProps {
 const FormField: React.FC<FormFieldProps> = ({ label, value, onChange, type = "text", placeholder }) => (
   <div className="space-y-1.5">
     <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">{label}</label>
-    <input 
+    <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-        label.includes('*') && !value ? 'border-red-200 bg-red-50/50' : ''
-      }`}
+      className={`w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all ${label.includes('*') && !value ? 'border-red-200 bg-red-50/50' : ''
+        }`}
     />
   </div>
 );
