@@ -1,0 +1,7 @@
+{
+  "name": "LensText AI",
+  "description": "A high-performance text extraction tool that uses Gemini AI to OCR images with extreme precision, allowing you to copy, summarize, and manage extracted content.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
