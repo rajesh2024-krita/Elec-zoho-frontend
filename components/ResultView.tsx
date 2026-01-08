@@ -132,7 +132,8 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
   }
 
   try {
-    const API_ENDPOINT = "http://localhost:5000/api/claims";
+    // const API_ENDPOINT = "http://localhost:5000/api/claims";
+    const API_ENDPOINT = "https://elec-zoho-backend.vercel.app/api/claims";
 
     // ✅ CREATE FORMDATA
     const formData = new FormData();
