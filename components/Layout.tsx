@@ -19,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, config, onOpenSettings
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">L</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">LensText AI</h1>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Defence Electronics AI Module</h1>
           </div>
           
           <div className="flex items-center gap-3">

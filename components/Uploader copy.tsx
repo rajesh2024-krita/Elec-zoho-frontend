@@ -1,6 +1,8 @@
 
 import React, { useState, useRef } from 'react';
-import { FileData } from '../types';
+import { ClaimData, FileData } from '../types';
+import VendorSearchSelect from './VendorSearchSelect';
+
 
 interface UploaderProps {
   onImageSelected: (data: FileData) => void;
@@ -9,46 +11,41 @@ interface UploaderProps {
 export const Uploader: React.FC<UploaderProps> = ({ onImageSelected }) => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [data, setData] = useState<ClaimData>(null);
 
   const handleFiles = (files: FileList | null) => {
-    if (!files || !files[0]) return;
+    if (files && files[0]) {
+      const file = files[0];
+      const reader = new FileReader();
 
-    const file = files[0];
-    const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string;
 
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-
-      // Text file handling
-      if (file.type === "text/plain") {
-        const textReader = new FileReader();
-
-        textReader.onload = (textEvent) => {
+        // For text files, we also want the raw string content
+        if (file.type === 'text/plain') {
+          const textReader = new FileReader();
+          textReader.onload = (textEvent) => {
+            onImageSelected({
+              base64,
+              mimeType: file.type,
+              previewUrl: URL.createObjectURL(file),
+              fileName: file.name,
+              textContent: textEvent.target?.result as string
+            });
+          };
+          textReader.readAsText(file);
+        } else {
           onImageSelected({
-            fileName: file.name,
+            base64,
             mimeType: file.type,
             previewUrl: URL.createObjectURL(file),
-            originalFile: file,       // ✅ THIS IS THE FIX
-            base64,
-            textContent: textEvent.target?.result as string
+            fileName: file.name
           });
-        };
-
-        textReader.readAsText(file);
-      } else {
-        onImageSelected({
-          fileName: file.name,
-          mimeType: file.type,
-          previewUrl: URL.createObjectURL(file),
-          originalFile: file,        // ✅ THIS IS THE FIX
-          base64
-        });
-      }
-    };
-
-    reader.readAsDataURL(file);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
-
 
   const onDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -67,6 +64,35 @@ export const Uploader: React.FC<UploaderProps> = ({ onImageSelected }) => {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFiles(e.dataTransfer.files);
     }
+  };
+
+  const CLAIM_MADE_BY_OPTIONS = [
+    "ANKIT (LG)",
+    "Ajay Rathore (BPL)",
+    "Arif (GODREJ)",
+    "Atiksha Ji",
+    "Bhaskar Mishra (VOLTAS)",
+    "Bhawani Singh (liebhrr)",
+    "Bhawani Singh Sisodiya (LIEBHERR)",
+    "Mahender Singh (Samsung)",
+    "Manisha Chouhan",
+    "Mohan Kumar (Bosch)",
+    "Mohsin Khan",
+    "Mukesh Dholi (BOSCH)",
+    "Pradeep sawami (OPPO)",
+    "Praveen Khichi",
+    "Rahul Singadiya (LIEBHERR)",
+    "Ram Ganesh",
+    "Sadhana Chundawat",
+    "Seema Saxena",
+    "Sunil Hunsaliya (TCL)",
+    "Sunita Kumari (CROMPTON)",
+    "Suresh Singh (Apple)",
+    "Yudhister Ji (LIEBHERR)"
+  ];
+
+  const handleFieldChange = (field: keyof ClaimData, value: string) => {
+    setData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -104,6 +130,32 @@ export const Uploader: React.FC<UploaderProps> = ({ onImageSelected }) => {
         <p className="text-xl font-bold text-gray-900">Drop your document here</p>
         <p className="text-sm text-gray-400 mt-2 font-medium uppercase tracking-wider">Images • PDF • Word • Text</p>
       </div>
+
+      <VendorSearchSelect
+        onSelect={(vendor) => {
+          console.log("Selected Vendor:", vendor);
+        }}
+      />
+
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">
+          Claim Made By
+        </label>
+        <select
+          value={data.claimMadeBy || ""}
+          onChange={(e) => handleFieldChange("claimMadeBy", e.target.value)}
+          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+        >
+          <option value="">- Select -</option>
+          {CLAIM_MADE_BY_OPTIONS.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mt-12">
         <FeatureCard

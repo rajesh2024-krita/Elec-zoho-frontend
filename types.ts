@@ -24,8 +24,18 @@ export interface CustomField {
 }
 
 export interface ClaimData {
-  supplierName: string;
-  vendorName: string;
+  supplierName?: string;
+  vendorName?: string;
+  companyBrandName: string;
+  claimType: ClaimType;
+  schemeType: SchemeType;
+  schemeStartDate: string;
+  schemeEndDate: string;
+  claimDetails: string;
+  additionalFields?: CustomField[];
+  claimMadeBy?: string; 
+}
+export interface ClaimDataAI {
   companyBrandName: string;
   claimType: ClaimType;
   schemeType: SchemeType;
@@ -61,6 +71,7 @@ export interface FileData {
   previewUrl: string;
   fileName: string;
   textContent?: string; // For .txt files
+  originalFile: File; // 🔥 REQUIRED
 }
 
 export interface AIKeys {

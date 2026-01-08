@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { ExtractionResult, FileData, ClaimData, ClaimType, CustomField, SchemeType } from '../types';
+import VendorSearchSelect from './VendorSearchSelect';
 
 interface ResultViewProps {
   result: ExtractionResult;
@@ -88,42 +89,92 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setSubmitError(null);
+  const REQUIRED_FIELDS: (keyof ClaimData)[] = [
+    "supplierName",
+    "vendorName",
+    "claimType",
+    "schemeType",
+    "claimDetails",
+    "claimMadeBy"
+  ];
 
-    try {
-      // NOTE: Replace this URL with your actual backend API endpoint
-      const API_ENDPOINT = 'https://elec-zoho-backend.vercel.app/api/claims';
-      // const API_ENDPOINT = 'http://localhost:5000/api/claims';
+  const validateRequiredFields = (data: ClaimData) => {
+    const missingFields: string[] = [];
 
-      const response = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          processed_at: new Date().toISOString(),
-          original_file: file.fileName
-        }),
-      });
+    REQUIRED_FIELDS.forEach((field) => {
+      const value = (data as any)[field];
 
-      console.log('data == ', data)
-      console.log('response == ', response)
-
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+      if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
+        missingFields.push(field);
       }
+    });
 
-      setShowSuccess(true);
-    } catch (err: any) {
-      console.error("Submission failed:", err);
-      setSubmitError(err.message || "Failed to send data to the API.");
-    } finally {
-      setSubmitting(false);
-    }
+    return missingFields;
   };
+
+
+  const handleSubmit = async () => {
+  setSubmitting(true);
+  setSubmitError(null);
+
+  const missingFields = validateRequiredFields(data);
+  if (missingFields.length > 0) {
+    setSubmitError(
+      `Please fill all required fields: ${missingFields.join(", ")}`
+    );
+    setSubmitting(false);
+    return;
+  }
+
+  try {
+    const API_ENDPOINT = "http://localhost:5000/api/claims";
+
+    // ✅ CREATE FORMDATA
+    const formData = new FormData();
+
+    // 🔹 Attach file (CRITICAL)
+    formData.append("file", file.originalFile); 
+    // ⬆️ original File object, not name
+
+    // 🔹 Attach all claim fields
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, String(value));
+        }
+      }
+    });
+
+    // 🔹 Meta fields
+    formData.append("processed_at", new Date().toISOString());
+    formData.append("original_file", file.fileName);
+
+    const response = await fetch(API_ENDPOINT, {
+      method: "POST",
+      body: formData, // ✅ NO HEADERS
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || `Server responded ${response.status}`);
+    }
+
+    setShowSuccess(true);
+  } catch (err: any) {
+    console.error("Submission failed:", err);
+    setSubmitError(err.message || "Failed to send data to the API.");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const isImage = file.mimeType.startsWith('image/');
   const isPdf = file.mimeType === 'application/pdf';
@@ -236,17 +287,26 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
             <div className="p-6 space-y-5">
               {/* Mandatory Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
+                <VendorSearchSelect
                   label="Supplier Name *"
                   value={data.supplierName}
-                  onChange={(v) => handleFieldChange('supplierName', v)}
-                  placeholder="Extracted supplier..."
+                  onSelect={(vendor) => {
+                    console.log("Selected Vendor:", vendor);
+
+                    // ✅ BOTH fields updated from ONE source
+                    handleFieldChange("supplierName", vendor.Vendor_Name);
+                    handleFieldChange("vendorName", vendor.Vendor_Name);
+                  }}
                 />
+
                 <FormField
                   label="Vendor Name"
                   value={data.vendorName}
-                  onChange={(v) => handleFieldChange('vendorName', v)}
+                  readOnly
+                  onChange={() => { }}
+                  placeholder="Auto-filled from supplier"
                 />
+
                 <FormField
                   label="Company/Brand Name"
                   value={data.companyBrandName}
@@ -300,10 +360,11 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">
-                  Claim Made By
+                  Claim Made By *
                 </label>
                 <select
                   value={data.claimMadeBy || ""}
+                  required
                   onChange={(e) => handleFieldChange("claimMadeBy", e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 >
@@ -343,13 +404,13 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                 </div>
               )}
 
-              <button
+              {/* <button
                 onClick={addField}
                 className="w-full py-3.5 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 text-xs font-bold hover:border-blue-400 hover:text-blue-600 transition-all flex items-center justify-center gap-2 tracking-widest"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
                 ADD CUSTOM FIELD
-              </button>
+              </button> */}
             </div>
           </div>
 

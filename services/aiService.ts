@@ -4,8 +4,6 @@ import { AIProvider, AIConfig, ExtractionResult, FileData } from "../types";
 
 const SYSTEM_PROMPT = `Extract claim information from this document/text. 
 Return ONLY a JSON object with these fields:
-- supplierName: string
-- vendorName: string
 - companyBrandName: string
 - claimType: one of ["General Information", "Price Drop", "Price List", "Monthly Scheme", "Goods Return", "Target Scheme", "DOA", "Other"]
 - schemeType: one of ["Sell In", "Sell Out"]
@@ -49,8 +47,6 @@ export const extractText = async (
       const parsed = JSON.parse(response.text || "{}");
       return {
         claimData: {
-          supplierName: parsed.supplierName || "",
-          vendorName: parsed.vendorName || "",
           companyBrandName: parsed.companyBrandName || "",
           claimType: parsed.claimType || "Other",
           schemeType: parsed.schemeType || "",
@@ -114,8 +110,6 @@ export const extractText = async (
 
     return {
       claimData: {
-        supplierName: parsed.supplierName || "",
-        vendorName: parsed.vendorName || "",
         companyBrandName: parsed.companyBrandName || "",
         claimType: parsed.claimType || "Other",
         schemeType: parsed.schemeType || "",
