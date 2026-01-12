@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { ExtractionResult, FileData, ClaimData, ClaimType, CustomField, SchemeType, DiscountModel, MonthlyScheme, CalculationResult } from '../types';
 import VendorSearchSelect from './VendorSearchSelect';
 import { CalculationPanel } from './CalculationPanel';
-import axios from 'axios';
 
 interface ResultViewProps {
   result: ExtractionResult;
@@ -58,11 +57,11 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
         const fullPrice = Number(model.fullPrice) || 0;
         const discountPercentage = Number(model.discountPercentage) || 0;
         const payoutAmount = Number(model.payoutAmount) || 0;
-
+        
         // Auto-calculate based on what we have
         let calculatedPayout = payoutAmount;
         let calculatedDiscount = discountPercentage;
-
+        
         if (fullPrice > 0) {
           if (discountPercentage > 0 && payoutAmount === 0) {
             calculatedPayout = fullPrice * (discountPercentage / 100);
@@ -70,28 +69,24 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
             calculatedDiscount = (payoutAmount / fullPrice) * 100;
           }
         }
-
+        
         return {
           ...model,
           payoutAmount: calculatedPayout,
-          discountPercentage: calculatedDiscount,
-          afterDiscount: fullPrice - calculatedPayout,
+          discountPercentage: calculatedDiscount
         };
-
       });
-
+      
       if (JSON.stringify(updatedModels) !== JSON.stringify(data.discountModels)) {
         setData(prev => ({ ...prev, discountModels: updatedModels }));
       }
-
     }
   }, [data.discountModels]);
 
   // Recalculate totals whenever data changes
   useEffect(() => {
     recalculateTotals();
-  }, [JSON.stringify(data.discountModels), JSON.stringify(data.monthlySchemes)]);
-
+  }, [data.discountModels, data.monthlySchemes]);
 
   const recalculateTotals = () => {
     // Calculate discount models totals
@@ -103,7 +98,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
       const price = Number(model.fullPrice) || 0;
       const discountPerc = Number(model.discountPercentage) || 0;
       const payout = Number(model.payoutAmount) || 0;
-
+      
       fullPayment += price;
       totalDiscount += (price * discountPerc) / 100;
       totalPayoutAmount += payout;
@@ -114,7 +109,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
       const achieved = Number(scheme.achievedQuantity) || 0;
       const payoutPerUnit = Number(scheme.payoutPerUnit) || 0;
       const total = achieved * payoutPerUnit;
-
+      
       return {
         ...scheme,
         totalPayout: total
@@ -146,17 +141,17 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
   const handleDiscountModelChange = (index: number, field: keyof DiscountModel, value: any) => {
     setData(prev => {
       const updatedModels = [...(prev.discountModels || [])];
-
+      
       // Only allow editing fullPrice - other fields auto-calculate
       if (field === 'fullPrice') {
         const fullPrice = Number(value) || 0;
         const currentModel = updatedModels[index];
         const discountPercentage = Number(currentModel.discountPercentage) || 0;
         const payoutAmount = Number(currentModel.payoutAmount) || 0;
-
+        
         let newPayout = payoutAmount;
         let newDiscount = discountPercentage;
-
+        
         // Auto-calculate based on existing discount or payout
         if (fullPrice > 0) {
           if (discountPercentage > 0) {
@@ -165,21 +160,19 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
             newDiscount = (payoutAmount / fullPrice) * 100;
           }
         }
-
-        updatedModels[index] = {
-          ...currentModel,
+        
+        updatedModels[index] = { 
+          ...currentModel, 
           [field]: fullPrice,
           discountPercentage: newDiscount,
-          payoutAmount: newPayout,
-          afterDiscount: fullPrice - newPayout,
+          payoutAmount: newPayout
         };
-
-      } else if (field === 'modelName' || field === 'sku') {
+      } else if (field === 'modelName') {
         // Allow editing model name
         updatedModels[index] = { ...updatedModels[index], [field]: value };
       }
       // Note: discountPercentage and payoutAmount are read-only - they auto-calculate
-
+      
       return { ...prev, discountModels: updatedModels };
     });
   };
@@ -195,7 +188,6 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
   const addDiscountModel = () => {
     const newModel: DiscountModel = {
       modelName: `Model ${(data.discountModels?.length || 0) + 1}`,
-      sku: "",
       fullPrice: 0,
       discountPercentage: 0,
       payoutAmount: 0
@@ -294,60 +286,33 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
       const formData = new FormData();
       formData.append("file", file.originalFile);
 
-      // Build final model array with all calculated values
-      const finalModels = (data.discountModels || []).map(m => ({
-        modelName: m.modelName,
-        sku: m.sku,
-        fullPrice: m.fullPrice,
-        discountPercentage: m.discountPercentage,
-        payoutAmount: m.payoutAmount,
-        afterDiscount: m.afterDiscount,
-      }));
-
-      const finalPayload = {
-        ...data,
-        discountModels: finalModels,
-      };
-
-      // Append everything
-      Object.entries(finalPayload).forEach(([key, value]) => {
-        formData.append(key, JSON.stringify(value));
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, String(value));
+          }
+        }
       });
-
-
-      // Object.entries(data).forEach(([key, value]) => {
-      //   if (value !== undefined && value !== null) {
-      //     if (Array.isArray(value)) {
-      //       formData.append(key, JSON.stringify(value));
-      //     } else {
-      //       formData.append(key, String(value));
-      //     }
-      //   }
-      // });
 
       formData.append("processed_at", new Date().toISOString());
       formData.append("original_file", file.fileName);
 
-      console.log("formData =", formData);
-
-      const response = await axios.post(API_ENDPOINT, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+      const response = await fetch(API_ENDPOINT, {
+        method: "POST",
+        body: formData,
       });
 
-      if (response.status !== 200) {
-        throw new Error(`Server responded ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `Server responded ${response.status}`);
       }
 
       setShowSuccess(true);
     } catch (err: any) {
       console.error("Submission failed:", err);
-      setSubmitError(
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to send data to the API."
-      );
+      setSubmitError(err.message || "Failed to send data to the API.");
     } finally {
       setSubmitting(false);
     }
@@ -390,17 +355,19 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
           </p>
         </div>
         <div className="flex gap-2">
-          {/* <button
+          <button
             onClick={() => setShowCalculations(!showCalculations)}
-            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all tracking-widest ${showCalculations ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
+            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all tracking-widest ${
+              showCalculations ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+            }`}
           >
             {showCalculations ? 'HIDE CALC' : 'SHOW CALC'}
-          </button> */}
+          </button>
           <button
             onClick={copyJSON}
-            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all tracking-widest ${copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
+            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all tracking-widest ${
+              copied ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+            }`}
           >
             {copied ? 'JSON COPIED' : 'COPY JSON'}
           </button>
@@ -432,9 +399,9 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
         </div>
       )}
 
-      {/* {showCalculations && data.calculations && (
+      {showCalculations && data.calculations && (
         <CalculationPanel calculations={data.calculations} />
-      )} */}
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Source Preview */}
@@ -465,7 +432,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
               </div>
             )}
           </div>
-
+          
           {/* AI Extracted Models Summary */}
           {data.discountModels && data.discountModels.length > 0 && (
             <div className="bg-green-50 border border-green-200 rounded-2xl p-4 mt-4">
@@ -476,8 +443,8 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                 <span className="text-xs font-bold text-green-700 uppercase">AI Extracted Models</span>
               </div>
               <p className="text-sm text-green-600">
-                Found {data.discountModels.length} model(s) in the document.
-                {data.discountModels.some(m => m.fullPrice === 0) &&
+                Found {data.discountModels.length} model(s) in the document. 
+                {data.discountModels.some(m => m.fullPrice === 0) && 
                   " Please enter full prices for accurate calculations."}
               </p>
             </div>
@@ -490,8 +457,8 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
             <div className="px-6 py-4 bg-gray-50 border-b flex items-center justify-between">
               <span className="text-sm font-bold text-gray-700">Claim Details</span>
               <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold uppercase">
-                {data.discountModels && data.discountModels.length > 0
-                  ? `${data.discountModels.length} Models Auto-Extracted`
+                {data.discountModels && data.discountModels.length > 0 
+                  ? `${data.discountModels.length} Models Auto-Extracted` 
                   : 'Manual Entry'}
               </span>
             </div>
@@ -591,9 +558,9 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                 <div className="flex justify-between items-center">
                   <div>
                     <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Model-wise Discount/Payout</h4>
-                    {/* <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       ✓ Discounts & payouts auto-calculated • Enter full prices only
-                    </p> */}
+                    </p>
                   </div>
                   <button
                     onClick={addDiscountModel}
@@ -605,23 +572,10 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                     ADD MODEL
                   </button>
                 </div>
-
+                
                 {data.discountModels?.map((model, index) => (
-                  <div key={index} className="grid grid-cols-2 gap-3 items-end p-4 bg-gradient-to-r from-blue-50/30 to-green-50/30 rounded-2xl border border-blue-100">
-                    <div className="">
-                      <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">
-                        SKU
-                      </label>
-                      <input
-                        type="text"
-                        value={model.sku || ""}
-                        onChange={(e) => handleDiscountModelChange(index, 'sku', e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
-                        placeholder="Enter SKU"
-                      />
-                    </div>
-
-                    <div className="">
+                  <div key={index} className="grid grid-cols-12 gap-3 items-end p-4 bg-gradient-to-r from-blue-50/30 to-green-50/30 rounded-2xl border border-blue-100">
+                    <div className="col-span-4">
                       <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Model Name</label>
                       <input
                         type="text"
@@ -631,7 +585,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                         placeholder="e.g., Samsung QLED 55"
                       />
                     </div>
-                    {/* <div className="col-span-2">
+                    <div className="col-span-2">
                       <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">
                         Full Price *
                         <span className="text-red-500 ml-1">✓</span>
@@ -644,8 +598,8 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                         placeholder="0"
                       />
                       <p className="text-[9px] text-gray-400 mt-1">Enter only</p>
-                    </div> */}
-                    <div className="">
+                    </div>
+                    <div className="col-span-2">
                       <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Discount %</label>
                       <input
                         type="text"
@@ -655,7 +609,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                       />
                       <p className="text-[9px] text-gray-400 mt-1">Auto-calculated</p>
                     </div>
-                    <div className="">
+                    <div className="col-span-2">
                       <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Payout</label>
                       <input
                         type="text"
@@ -666,7 +620,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                       <p className="text-[9px] text-gray-400 mt-1">Auto-calculated</p>
                     </div>
                     <div className="col-span-2 flex gap-2">
-                      {/* <div className="flex-1">
+                      <div className="flex-1">
                         <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">After Discount</label>
                         <input
                           type="text"
@@ -674,7 +628,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                           readOnly
                           className="w-full bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm font-bold text-green-700 cursor-not-allowed"
                         />
-                      </div> */}
+                      </div>
                       <button
                         onClick={() => removeDiscountModel(index)}
                         className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors"
@@ -696,7 +650,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
               </div>
 
               {/* Monthly Schemes Section */}
-              {/* <div className="pt-4 border-t border-gray-100 space-y-4">
+              <div className="pt-4 border-t border-gray-100 space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
                     <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Monthly Target Scheme</h4>
@@ -712,7 +666,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                     ADD MONTH
                   </button>
                 </div>
-
+                
                 {data.monthlySchemes?.map((scheme, index) => (
                   <div key={index} className="grid grid-cols-12 gap-2 items-end p-4 bg-gradient-to-r from-purple-50/30 to-pink-50/30 rounded-2xl border border-purple-100">
                     <div className="col-span-3">
@@ -770,7 +724,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
                     </div>
                   </div>
                 ))}
-              </div> */}
+              </div>
 
               {/* Custom Fields Section */}
               {data.additionalFields && data.additionalFields.length > 0 && (

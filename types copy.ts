@@ -5,89 +5,14 @@ export enum AIProvider {
   GROQ = 'GROQ'
 }
 
-// Add these to your existing types.ts file
-
-export enum AppMode {
-  CLAIM = 'CLAIM',
-  VENDOR = 'VENDOR'
-}
-
-export interface VendorData {
-  // Basic Information
-  Vendor_Name: string;
-  Email: string;
-  Phone: string;
-  Website: string;
-  Owner_Name: string;
-  CompanyBrand: string;
-  Supplier_Code: string;
-  Vendor_Owner: string;
-  Payment_Terms: string;
-  Currency: string;
-  Source: string;
-
-  // Tax Information
-  GSTIN_NUMBER: string;
-  Type_of_Supplier: string;
-
-  // Address
-  Street: string;
-  City: string;
-  State: string;
-  Zip_Code: string;
-  Country: string;
-
-  // Additional
-  Description: string;
-}
-
-export interface VendorFileData {
-  fileName: string;
-  mimeType: string;
-  previewUrl: string;
-  originalFile: File;
-  base64: string;
-  textContent?: string;
-}
-
-export interface VendorExtractionResult {
-  vendorData: VendorData;
-  rawText: string;
-  modelUsed: string;
-  confidenceScore?: number;
-}
-
-
-// If you have a FileData interface for claims, make sure it's compatible:
-export interface FileData {
-  fileName: string;
-  mimeType: string;
-  previewUrl: string;
-  originalFile: File;
-  base64: string;
-  textContent?: string;
-}
-
-// Update your existing AIConfig if needed to ensure it has Gemini key:
-export interface AIConfig {
-  provider: AIProvider;
-  modelId: string;
-  keys: {
-    GEMINI: string;
-    OPENAI: string;
-    GROQ: string;
-    // Add other providers if needed
-  };
-}
-
-export type ClaimType =
-  | 'General Information'
-  | 'Price Drop'
-  | 'Price List'
-  | 'Monthly Scheme'
-  | 'Goods Return'
-  | 'Target Scheme'
-  | 'DOA'
+export type ClaimType = 
+  | 'General Information' 
+  | 'Price Drop' 
+  | 'Price List' 
+  | 'Monthly Scheme' 
+  | 'Goods Return' 
+  | 'Target Scheme' 
+  | 'DOA' 
   | 'Other';
 
 export type SchemeType = 'Sell In' | 'Sell Out' | '';
@@ -104,11 +29,11 @@ export interface ClaimData {
   companyBrandName: string;
   claimType: ClaimType;
   schemeType: SchemeType;
-  schemeStartDate: Date;
-  schemeEndDate: Date;
+  schemeStartDate: string;
+  schemeEndDate: string;
   claimDetails: string;
   additionalFields?: CustomField[];
-  claimMadeBy?: string;
+  claimMadeBy?: string; 
   brandModel?: string;
   // NEW FIELDS FOR CALCULATIONS
   discountModels?: DiscountModel[];
@@ -124,7 +49,7 @@ export interface ClaimDataAI {
   schemeEndDate: string;
   claimDetails: string;
   additionalFields?: CustomField[];
-  claimMadeBy?: string;
+  claimMadeBy?: string; 
 }
 
 export interface ModelOption {
@@ -137,8 +62,6 @@ export enum AppStep {
   UPLOAD = 'UPLOAD',
   PROCESSING = 'PROCESSING',
   RESULT = 'RESULT',
-  VENDOR_RESULT = 'VENDOR_RESULT', // Add this
-  PROCESSING_VENDOR = 'PROCESSING_VENDOR',
   ERROR = 'ERROR'
 }
 
@@ -164,11 +87,11 @@ export interface AIKeys {
   GROQ?: string;
 }
 
-// export interface AIConfig {
-//   provider: AIProvider;
-//   modelId: string;
-//   keys: AIKeys;
-// }
+export interface AIConfig {
+  provider: AIProvider;
+  modelId: string;
+  keys: AIKeys;
+}
 
 export const PROVIDER_MODELS: Record<AIProvider, ModelOption[]> = {
   [AIProvider.GEMINI]: [
@@ -187,7 +110,6 @@ export const PROVIDER_MODELS: Record<AIProvider, ModelOption[]> = {
 };
 
 export interface DiscountModel {
-  sku?: string;
   modelName: string;
   fullPrice: number;
   discountPercentage: number;
