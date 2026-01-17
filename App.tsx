@@ -22,6 +22,8 @@ import { VendorFileData, VendorExtractionResult } from './vendorTypes';
 
 import { extractText } from './services/aiService';
 import { extractVendorInfo } from './services/vendorAiService';
+import Sales from './components/Sales';
+import FinanceForm from './components/FinanceForm';
 
 const STORAGE_KEY = 'lenstext_config_v2';
 
@@ -130,8 +132,18 @@ const App: React.FC = () => {
 
           {/* CLAIM HOME */}
           <Route
-            path="/"
+            path="/claim"
             element={<Uploader onImageSelected={handleFileSelected} />}
+          />
+          
+          <Route
+            path="/sales"
+            element={<Sales />}
+          />
+          
+          <Route
+            path="/finance"
+            element={<FinanceForm />}
           />
 
           {/* CLAIM WORKFLOW */}
