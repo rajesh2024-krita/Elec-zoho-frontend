@@ -74,7 +74,7 @@ export const extractText = async (
   const base64Pure = base64.split(',')[1] || base64;
 
   if (config.provider === AIProvider.GEMINI) {
-    const apiKey = config.keys.GEMINI || process.env.API_KEY || '';
+    const apiKey = config.keys.GEMINI || import.meta.env.VITE_GEMINI_KEY || '';
     if (!apiKey) throw new Error("No Gemini API key found.");
 
     const ai = new GoogleGenAI({ apiKey });

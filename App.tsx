@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+
+import { AuthProvider } from './contexts/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+import Login from './components/Login';
 
 import { Layout } from './components/Layout';
 import { Uploader } from './components/Uploader';
@@ -27,8 +31,7 @@ import FinanceForm from './components/FinanceForm';
 
 const STORAGE_KEY = 'lenstext_config_v2';
 
-const App: React.FC = () => {
-
+const AppContent: React.FC = () => {
   // ---------------- CLAIM FLOW STATE ----------------
   const [claimStep, setClaimStep] = useState<AppStep>(AppStep.UPLOAD);
   const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
@@ -117,94 +120,102 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
+      <Routes>
+        {/* Public route */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* Private routes */}
+        <Route path="/" element={
+          <PrivateRoute>
+            <Navigate to="/claim" replace />
+          </PrivateRoute>
+        } />
+        
+        <Route path="/claim" element={
+          <PrivateRoute>
+            <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
+              {isSettingsOpen && (
+                <Settings
+                  config={aiConfig}
+                  onConfigChange={setAiConfig}
+                  onClose={() => setIsSettingsOpen(false)}
+                />
+              )}
+              
+              {claimStep === AppStep.UPLOAD && (
+                <Uploader onImageSelected={handleFileSelected} />
+              )}
 
-        {/* Settings Modal */}
-        {isSettingsOpen && (
-          <Settings
-            config={aiConfig}
-            onConfigChange={setAiConfig}
-            onClose={() => setIsSettingsOpen(false)}
-          />
-        )}
+              {claimStep === AppStep.PROCESSING && <Processing />}
 
-        <Routes>
+              {claimStep === AppStep.RESULT && result && selectedFile && (
+                <ResultView result={result} file={selectedFile} onReset={resetClaim} />
+              )}
 
-          {/* CLAIM HOME */}
-          <Route
-            path="/claim"
-            element={<Uploader onImageSelected={handleFileSelected} />}
-          />
-          
-          <Route
-            path="/sales"
-            element={<Sales />}
-          />
-          
-          <Route
-            path="/finance"
-            element={<FinanceForm />}
-          />
+              {claimStep === AppStep.ERROR && (
+                <div>
+                  <p>{error}</p>
+                  <button onClick={resetClaim}>Retry</button>
+                </div>
+              )}
+            </Layout>
+          </PrivateRoute>
+        } />
+        
+        <Route path="/sales" element={
+          <PrivateRoute>
+            <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
+              <Sales />
+            </Layout>
+          </PrivateRoute>
+        } />
+        
+        <Route path="/finance" element={
+          <PrivateRoute>
+            <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
+              <FinanceForm />
+            </Layout>
+          </PrivateRoute>
+        } />
+        
+        <Route path="/purchase-order" element={
+          <PrivateRoute>
+            <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
+              {vendorStep === AppStep.UPLOAD && (
+                <VendorUploader onVendorSelected={handleVendorSelect} />
+              )}
 
-          {/* CLAIM WORKFLOW */}
-          <Route
-            path="/claim"
-            element={
-              <>
-                {claimStep === AppStep.UPLOAD && (
-                  <Uploader onImageSelected={handleFileSelected} />
+              {vendorStep === AppStep.PROCESSING_VENDOR && <Processing />}
+
+              {vendorStep === AppStep.VENDOR_RESULT &&
+                vendorResult &&
+                vendorFile && (
+                  <VendorResultView
+                    result={vendorResult}
+                    file={vendorFile}
+                    onReset={resetVendor}
+                  />
                 )}
 
-                {claimStep === AppStep.PROCESSING && <Processing />}
-
-                {claimStep === AppStep.RESULT && result && selectedFile && (
-                  <ResultView result={result} file={selectedFile} onReset={resetClaim} />
-                )}
-
-                {claimStep === AppStep.ERROR && (
-                  <div>
-                    <p>{error}</p>
-                    <button onClick={resetClaim}>Retry</button>
-                  </div>
-                )}
-              </>
-            }
-          />
-
-          {/* VENDOR WORKFLOW */}
-          <Route
-            path="/vendor"
-            element={
-              <>
-                {vendorStep === AppStep.UPLOAD && (
-                  <VendorUploader onVendorSelected={handleVendorSelect} />
-                )}
-
-                {vendorStep === AppStep.PROCESSING_VENDOR && <Processing />}
-
-                {vendorStep === AppStep.VENDOR_RESULT &&
-                  vendorResult &&
-                  vendorFile && (
-                    <VendorResultView
-                      result={vendorResult}
-                      file={vendorFile}
-                      onReset={resetVendor}
-                    />
-                  )}
-
-                {vendorStep === AppStep.ERROR && (
-                  <div>
-                    <p>{error}</p>
-                    <button onClick={resetVendor}>Retry</button>
-                  </div>
-                )}
-              </>
-            }
-          />
-
-        </Routes>
-      </Layout>
+              {vendorStep === AppStep.ERROR && (
+                <div>
+                  <p>{error}</p>
+                  <button onClick={resetVendor}>Retry</button>
+                </div>
+              )}
+            </Layout>
+          </PrivateRoute>
+        } />
+      </Routes>
     </Router>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

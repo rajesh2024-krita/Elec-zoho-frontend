@@ -372,142 +372,140 @@ const Sales: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  // Validation
-  if (!state.customer.mobile || state.customer.mobile.length !== 10) {
-    alert('Please enter a valid 10-digit mobile number');
-    return;
-  }
-
-  if (!state.customer.firstName || !state.customer.lastName) {
-    alert('Please enter customer name');
-    return;
-  }
-
-  // Check if multi-product is enabled but additional product fields are empty
-  if (state.multiProduct) {
-    const hasAdditionalProducts = state.product2 || state.product3 || state.product4 || state.product5;
-    if (!hasAdditionalProducts) {
-      alert('Multi-Product is enabled but no additional products are filled. Please fill at least one additional product or disable Multi-Product.');
+    // Validation
+    if (!state.customer.mobile || state.customer.mobile.length !== 10) {
+      alert('Please enter a valid 10-digit mobile number');
       return;
     }
-  }
 
-  if (state.products.some(p => !p.productName || !p.rate || !p.category)) {
-    alert('Please fill all required product details');
-    return;
-  }
-
-  setState(prev => ({ ...prev, isSubmitting: true }));
-
-  try {
-    // Step 1: Save or Update Contact
-    const contactResponse = await fetch(`${API_BASE_URL}/contacts/save`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        mobile: state.customer.mobile,
-        firstName: state.customer.firstName,
-        lastName: state.customer.lastName,
-        email: state.customer.email,
-        alternateNumber: state.customer.alternateNumber,
-        address: state.customer.address,
-        location: state.customer.location,
-        gstInputClaim: state.gstInputClaim,
-        gstNumber: state.gstNumber,
-        contactId: state.selectedContactId
-      })
-    });
-
-    const contactData = await contactResponse.json();
-
-    if (!contactData.success) {
-      throw new Error(contactData.message || 'Failed to save contact');
+    if (!state.customer.firstName || !state.customer.lastName) {
+      alert('Please enter customer name');
+      return;
     }
 
-    const savedContactId = contactData.data.id || state.selectedContactId;
-
-    // Prepare product data for backend
-    const productData = {
-      // Main product from products array (first product)
-      product1: state.products[0]?.productName || '',
-      modelNo1: state.products[0]?.modelNo || '',
-      rate1: state.products[0]?.rate || '',
-      sku1: state.products[0]?.sku || '',
-      // Additional products from multi-product fields
-      product2: state.product2 || '',
-      product3: state.product3 || '',
-      product4: state.product4 || '',
-      product5: state.product5 || '',
-      modelNo2: state.modelNo2 || '',
-      modelNo3: state.modelNo3 || '',
-      modelNo4: state.modelNo4 || '',
-      modelNo5: state.modelNo5 || '',
-      rate2: state.rate2 || '',
-      rate3: state.rate3 || '',
-      rate4: state.rate4 || '',
-      rate5: state.rate5 || '',
-      sku2: state.sku2 || '',
-      sku3: state.sku3 || '',
-      sku4: state.sku4 || '',
-      sku5: state.sku5 || '',
-    };
-
-    // Step 2: Create Sale/Deal with multi-product data
-    const saleResponse = await fetch(`${API_BASE_URL}/sales/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contactId: savedContactId,
-        products: state.products,
-        // Include multi-product fields
-        ...productData,
-        multiProduct: state.multiProduct,
-        gstInputClaim: state.gstInputClaim,
-        gstNumber: state.gstNumber,
-        salesman1: state.salesman1,
-        salesman2: state.salesman2,
-        salesman3: state.salesman3,
-        deliveryLater: state.deliveryLater,
-        deliveryDate: state.deliveryDate,
-        underExchange: state.underExchange,
-        exchangeInfo: state.exchangeInfo,
-        diwaliSpinWin: state.diwaliSpinWin,
-        discount: state.discount,
-        discountAmount: state.discountAmount,
-        discountApprover: state.discountApprover,
-        discountSignature: state.discountSignature,
-        schemeNo: state.schemeNo,
-        giftAmount: state.giftAmount,
-        paymentMode: state.paymentMode,
-        paymentOther: state.paymentOther,
-        bank: state.bank,
-        additionalInfo: state.additionalInfo,
-        // Include customer data
-        customer: state.customer
-      })
-    });
-
-    const saleData = await saleResponse.json();
-
-    if (!saleData.success) {
-      throw new Error(saleData.message || 'Failed to create sale');
+    // Check if multi-product is enabled but additional product fields are empty
+    if (state.multiProduct) {
+      const hasAdditionalProducts = state.product2 || state.product3 || state.product4 || state.product5;
+      if (!hasAdditionalProducts) {
+        alert('Multi-Product is enabled but no additional products are filled. Please fill at least one additional product or disable Multi-Product.');
+        return;
+      }
     }
 
-    setSuccess(true);
-    setState(prev => ({ ...prev, isSubmitting: false }));
+    if (state.products.some(p => !p.productName || !p.rate || !p.category)) {
+      alert('Please fill all required product details');
+      return;
+    }
 
-  } catch (error: any) {
-    console.error('Submit error:', error);
-    alert(`Error: ${error.message}`);
-    setState(prev => ({ ...prev, isSubmitting: false }));
-  }
-};
+    setState(prev => ({ ...prev, isSubmitting: true }));
+
+    try {
+      // Step 1: Save or Update Contact
+      const contactResponse = await fetch(`${API_BASE_URL}/contacts/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mobile: state.customer.mobile,
+          firstName: state.customer.firstName,
+          lastName: state.customer.lastName,
+          email: state.customer.email,
+          alternateNumber: state.customer.alternateNumber,
+          address: state.customer.address,
+          location: state.customer.location,
+          gstInputClaim: state.gstInputClaim,
+          gstNumber: state.gstNumber,
+          contactId: state.selectedContactId
+        })
+      });
+
+      const contactData = await contactResponse.json();
+
+      if (!contactData.success) {
+        throw new Error(contactData.message || 'Failed to save contact');
+      }
+
+      const savedContactId = contactData.data.id || state.selectedContactId;
+
+      // Prepare product data for backend
+      const productData = {
+        // Main product from products array
+        product1: state.products[0]?.productName || '',
+        modelNo1: state.products[0]?.modelNo || '',
+        rate1: state.products[0]?.rate || '',
+        sku1: state.products[0]?.sku || '',
+        // Additional products from multi-product fields
+        product2: state.product2 || '',
+        product3: state.product3 || '',
+        product4: state.product4 || '',
+        product5: state.product5 || '',
+        modelNo2: state.modelNo2 || '',
+        modelNo3: state.modelNo3 || '',
+        modelNo4: state.modelNo4 || '',
+        modelNo5: state.modelNo5 || '',
+        rate2: state.rate2 || '',
+        rate3: state.rate3 || '',
+        rate4: state.rate4 || '',
+        rate5: state.rate5 || '',
+        sku2: state.sku2 || '',
+        sku3: state.sku3 || '',
+        sku4: state.sku4 || '',
+        sku5: state.sku5 || '',
+      };
+
+      // Step 2: Create Sale/Deal with multi-product data
+      const saleResponse = await fetch(`${API_BASE_URL}/sales/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contactId: savedContactId,
+          products: state.products,
+          // Include multi-product fields
+          ...productData,
+          multiProduct: state.multiProduct,
+          gstInputClaim: state.gstInputClaim,
+          gstNumber: state.gstNumber,
+          salesman1: state.salesman1,
+          salesman2: state.salesman2,
+          salesman3: state.salesman3,
+          deliveryLater: state.deliveryLater,
+          deliveryDate: state.deliveryDate,
+          underExchange: state.underExchange,
+          exchangeInfo: state.exchangeInfo,
+          diwaliSpinWin: state.diwaliSpinWin,
+          discount: state.discount,
+          discountAmount: state.discountAmount,
+          discountApprover: state.discountApprover,
+          discountSignature: state.discountSignature,
+          schemeNo: state.schemeNo,
+          giftAmount: state.giftAmount,
+          paymentMode: state.paymentMode,
+          paymentOther: state.paymentOther,
+          bank: state.bank,
+          additionalInfo: state.additionalInfo
+        })
+      });
+
+      const saleData = await saleResponse.json();
+
+      if (!saleData.success) {
+        throw new Error(saleData.message || 'Failed to create sale');
+      }
+
+      setSuccess(true);
+      setState(prev => ({ ...prev, isSubmitting: false }));
+
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      alert(`Error: ${error.message}`);
+      setState(prev => ({ ...prev, isSubmitting: false }));
+    }
+  };
 
   const totalAmount = state.products.reduce((acc, curr) => acc + (curr.rate * curr.quantity) + Number(curr.oneAssistAmount), 0);
   const finalPayable = state.discount ? totalAmount - state.discountAmount : totalAmount;

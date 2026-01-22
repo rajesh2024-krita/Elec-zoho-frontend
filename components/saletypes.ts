@@ -16,6 +16,10 @@ export interface Product {
   rate: string;
 }
 
+export type LocationKey = 'DB' | 'DG' | 'DH' | 'DRS' | 'DT' | 'SM';
+
+
+// Update LineItem type in saletypes.ts
 export interface LineItem {
   id: string;
   category: string;
@@ -33,10 +37,9 @@ export interface LineItem {
   installationPaidBy: string;
 }
 
-export type LocationKey = 'DB' | 'DG' | 'DH' | 'DRS' | 'DT' | 'SM';
-
 export interface BillingState {
   customer: Contact;
+  selectedContactId: string | null;
   gstInputClaim: boolean;
   gstNumber: string;
   multiProduct: boolean;
@@ -53,6 +56,23 @@ export interface BillingState {
   discountApprover: string;
   discountSignature: string;
   products: LineItem[];
+  // Add additional product fields for multi-product
+  product2?: string;
+  product3?: string;
+  product4?: string;
+  product5?: string;
+  modelNo2?: string;
+  modelNo3?: string;
+  modelNo4?: string;
+  modelNo5?: string;
+  rate2?: string;
+  rate3?: string;
+  rate4?: string;
+  rate5?: string;
+  sku2?: string;
+  sku3?: string;
+  sku4?: string;
+  sku5?: string;
   schemeNo: string;
   giftAmount: number;
   paymentMode: string;

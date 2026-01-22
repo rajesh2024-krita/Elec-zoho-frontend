@@ -210,3 +210,15 @@ export interface CalculationResult {
   totalMonthlyPayout: number;
   finalPayment: number; // netPayment - totalMonthlyPayout
 }
+
+// In your types.ts file, add:
+export interface AuthState {
+  isAuthenticated: boolean;
+  user: string | null;
+  loginTime: number | null;
+}
+
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}

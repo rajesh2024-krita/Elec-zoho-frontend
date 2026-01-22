@@ -55,7 +55,7 @@ export const extractVendorInfo = async (
   const base64Pure = base64.split(",")[1] || base64;
 
   if (config.provider === "GEMINI") {
-    const apiKey = config.keys.GEMINI;
+    const apiKey = config.keys.GEMINI || import.meta.env.VITE_GEMINI_KEY;
     if (!apiKey) throw new Error("No Gemini API key found.");
 
     const ai = new GoogleGenAI({ apiKey });
