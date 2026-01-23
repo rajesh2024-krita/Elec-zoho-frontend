@@ -103,8 +103,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, config, onOpenSettings
           <Link to="/claim" onClick={() => setMenuOpen(false)}
             className="hover:text-blue-600">Claim</Link>
 
-          <Link to="/vendor" onClick={() => setMenuOpen(false)}
-            className="hover:text-blue-600">Vendor</Link>
+          <Link to="/purchase-order" onClick={() => setMenuOpen(false)}
+            className="hover:text-blue-600">Purchase Order</Link>
 
           <Link to="/sales" onClick={() => setMenuOpen(false)}
             className="hover:text-blue-600">Sales</Link>
