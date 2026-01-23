@@ -419,7 +419,7 @@ const FinanceForm: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL || 'https://elec-zoho-backend-snowy.vercel.app/api'}/trail/search?mobile=${state.Mobile_Number}`
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/trail/search?mobile=${state.Mobile_Number}`
       );
 
       const data = await response.json();
@@ -784,7 +784,7 @@ const FinanceForm: React.FC = () => {
       const endpoint = '/trail/create';
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL || 'https://elec-zoho-backend-snowy.vercel.app/api'}${endpoint}`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}${endpoint}`,
         {
           method: 'POST',
           body: formData

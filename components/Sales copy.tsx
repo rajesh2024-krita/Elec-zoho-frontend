@@ -123,7 +123,7 @@ const ONE_ASSIST_PLANS = ['-Select-', 'Basic Plan - â‚¹999', 'Standard Plan - â‚
 const PAYMENT_MODES = ['Cash', 'Credit Card', 'Debit Card', 'UPI', 'Cheque', 'Bank Transfer', 'Other'];
 
 // API Base URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://elec-zoho-backend-snowy.vercel.app/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const Sales: React.FC = () => {
   // Main State

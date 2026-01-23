@@ -35,7 +35,7 @@ import {
 } from './saleconstants';
 
 // API Base URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://elec-zoho-backend-snowy.vercel.app/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const Sales: React.FC = () => {
   const [state, setState] = useState<BillingState>({

@@ -289,7 +289,7 @@ export const ResultView: React.FC<ResultViewProps> = ({ result, file, onReset })
     }
 
     try {
-      const API_ENDPOINT = "https://elec-zoho-backend-snowy.vercel.app/api/claims";
+      const API_ENDPOINT = "http://localhost:5000/api/claims";
 
       const formData = new FormData();
       formData.append("file", file.originalFile);
