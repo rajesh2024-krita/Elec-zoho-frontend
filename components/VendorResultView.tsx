@@ -88,7 +88,7 @@ export const VendorResultView: React.FC<VendorResultViewProps> = ({ result, file
     setSubmitError(null);
 
     try {
-      const API_ENDPOINT = "http://localhost:5000/api/vendors";
+      const API_ENDPOINT = "https://elec-zoho-backend-snowy.vercel.app/api/vendors";
 
       const formData = new FormData();
       formData.append("file", file.originalFile);
