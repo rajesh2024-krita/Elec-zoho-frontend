@@ -36,7 +36,7 @@ export default function VendorSearchSelect({
 
     const delay = setTimeout(() => {
       axios
-        .get("http://localhost:5000/vendors/search", {
+        .get("https://elec-zoho-backend-snowy.vercel.app/vendors/search", {
           params: { q: search }
         })
         .then((res) => {
