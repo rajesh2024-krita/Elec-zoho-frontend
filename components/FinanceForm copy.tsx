@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   User,
@@ -33,8 +33,7 @@ import {
   Percent as PercentIcon,
   Package2,
   Target,
-  Gift as GiftIcon,
-  X
+  Gift as GiftIcon
 } from 'lucide-react';
 
 // Types for Trail Record
@@ -45,7 +44,7 @@ interface TrailRecord {
   Fathers_Name: string;
   Mobile_Number: string;
   Contact_Number: string;
-  Email_Address: string;
+  Email: string;
   Secondary_Email: string;
   Address: string;
   District: string;
@@ -138,26 +137,6 @@ interface TrailRecord {
   Diwali_2024_Spin: string;
   Gift_Contribution: string;
   Gift_Offer: string | string[];
-  Product?: string;
-}
-
-interface Product {
-  id: string;
-  name: string;
-  sku: string;
-  model_no: string;
-  rate: number;
-  category: string;
-  brand: string;
-  stock: number;
-}
-
-interface ProductRow {
-  id: string;
-  productName: string;
-  sku: string;
-  modelNo: string;
-  rate: number;
 }
 
 interface FinanceState {
@@ -167,7 +146,7 @@ interface FinanceState {
   Fathers_Name: string;
   Mobile_Number: string;
   Contact_Number: string;
-  Email_Address: string;
+  Email: string;
   Secondary_Email: string;
   Address: string;
   District: string;
@@ -203,7 +182,6 @@ interface FinanceState {
   Limit_Approved: boolean;
 
   // Product Details
-  Product: string;
   SKU1: string;
   SKU2: string;
   SKU3: string;
@@ -281,10 +259,7 @@ interface FinanceState {
   isSubmitting: boolean;
   selectedRecordId: string | null;
   searchMessage: string;
-  isNewRecord: boolean;
 }
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://elec-zoho-backend-snowy.vercel.app/api';
 
 const FinanceForm: React.FC = () => {
   const [state, setState] = useState<FinanceState>({
@@ -294,7 +269,7 @@ const FinanceForm: React.FC = () => {
     Fathers_Name: '',
     Mobile_Number: '',
     Contact_Number: '',
-    Email_Address: '',
+    Email: '',
     Secondary_Email: '',
     Address: '',
     District: '',
@@ -330,7 +305,6 @@ const FinanceForm: React.FC = () => {
     Limit_Approved: false,
 
     // Product Details
-    Product: '',
     SKU1: '',
     SKU2: '',
     SKU3: '',
@@ -407,18 +381,12 @@ const FinanceForm: React.FC = () => {
     isSearching: false,
     isSubmitting: false,
     selectedRecordId: null,
-    searchMessage: '',
-    isNewRecord: true
+    searchMessage: ''
   });
 
   const [trailSuggestions, setTrailSuggestions] = useState<TrailRecord[]>([]);
   const [showTrailDropdown, setShowTrailDropdown] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [productRows, setProductRows] = useState<ProductRow[]>([
-    { id: 'product-1', productName: '', sku: '', modelNo: '', rate: 0 }
-  ]);
-  const [productSuggestions, setProductSuggestions] = useState<{ [key: number]: Product[] }>({});
-  const [searchingProduct, setSearchingProduct] = useState<{ [key: number]: boolean }>({});
 
   // Generate Token Number
   function generateTokenNumber() {
@@ -433,107 +401,64 @@ const FinanceForm: React.FC = () => {
     setState(prev => ({ ...prev, Balance: balance }));
   }, [state.Bill_Amount, state.Approx_Advance]);
 
-  // Sync product rows with state fields when Multi_Product changes
-  useEffect(() => {
-    if (state.Multi_Product && productRows.length < 5) {
-      // Add more rows when Multi_Product is enabled
-      const newRows = [
-        ...productRows,
-        { id: 'product-2', productName: '', sku: '', modelNo: '', rate: 0 },
-        { id: 'product-3', productName: '', sku: '', modelNo: '', rate: 0 },
-        { id: 'product-4', productName: '', sku: '', modelNo: '', rate: 0 },
-        { id: 'product-5', productName: '', sku: '', modelNo: '', rate: 0 },
-      ];
-      setProductRows(newRows.slice(0, 5));
-    } else if (!state.Multi_Product && productRows.length > 1) {
-      // Keep only first row when Multi_Product is disabled
-      setProductRows([productRows[0]]);
-      // Clear suggestions for removed rows
-      setProductSuggestions({});
-      setSearchingProduct({});
-    }
-  }, [state.Multi_Product]);
-
-  // Sync product rows with state fields
-  useEffect(() => {
-    // Update state fields based on product rows
-    const newState: Partial<FinanceState> = {
-      Product: productRows[0]?.productName || '',
-      SKU1: productRows[0]?.sku || '',
-      Model_No: productRows[0]?.modelNo || '',
-      Rate_1: productRows[0]?.rate || 0,
-      SKU2: productRows[1]?.sku || '',
-      Model_No_2: productRows[1]?.modelNo || '',
-      Rate_2: productRows[1]?.rate || 0,
-      SKU3: productRows[2]?.sku || '',
-      Model_No_3: productRows[2]?.modelNo || '',
-      Rate_3: productRows[2]?.rate || 0,
-      SKU4: productRows[3]?.sku || '',
-      Model_No_4: productRows[3]?.modelNo || '',
-      Rate_4: productRows[3]?.rate || 0,
-      SKU5: productRows[4]?.sku || '',
-      Model_No_5: productRows[4]?.modelNo || '',
-      Rate_5: productRows[4]?.rate || 0,
-    };
-
-    // Update category and brand from first product
-    if (productRows[0]?.productName) {
-      // These would typically come from the selected product
-      // For now, we'll keep them as is
+  // Search Trail Records by Mobile Number
+  const handleTrailSearch = async () => {
+    if (state.Mobile_Number.length !== 10) {
+      setState(prev => ({ ...prev, searchMessage: 'Please enter a valid 10-digit mobile number' }));
+      return;
     }
 
-    setState(prev => ({ ...prev, ...newState }));
-  }, [productRows]);
+    setState(prev => ({
+      ...prev,
+      isSearching: true,
+      searchMessage: '',
+      selectedRecordId: null
+    }));
+    setTrailSuggestions([]);
+    setShowTrailDropdown(false);
 
-  // Auto-load customer details when mobile number is entered
-  useEffect(() => {
-    const loadCustomerDetails = async () => {
-      if (state.Mobile_Number.length === 10 && state.isNewRecord) {
-        setState(prev => ({ ...prev, isSearching: true, searchMessage: '' }));
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}/trail/search?mobile=${state.Mobile_Number}`
+      );
 
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/trail/search?mobile=${state.Mobile_Number}`
-          );
+      const data = await response.json();
 
-          const data = await response.json();
+      if (data.success) {
+        if (data.records && data.records.length > 0) {
+          setTrailSuggestions(data.records);
+          setShowTrailDropdown(true);
 
-          if (data.success && data.records && data.records.length > 0) {
-            // If only one record found, auto-load it
-            if (data.records.length === 1) {
-              handleAutoLoadTrailRecord(data.records[0]);
-            } else {
-              // Show dropdown for multiple records
-              setTrailSuggestions(data.records);
-              setShowTrailDropdown(true);
-              setState(prev => ({
-                ...prev,
-                searchMessage: `Found ${data.records.length} existing records. Select one to load customer details.`
-              }));
-            }
+          if (data.records.length === 1) {
+            // Auto-select if only one record found
+            handleSelectTrailRecord(data.records[0]);
           } else {
             setState(prev => ({
               ...prev,
-              searchMessage: 'No existing record found. Please fill new customer details.',
-              isNewRecord: true
+              searchMessage: `Found ${data.records.length} records in Trail. Select one to load data.`
             }));
           }
-        } catch (error) {
-          console.error('Error loading customer details:', error);
-        } finally {
-          setState(prev => ({ ...prev, isSearching: false }));
+        } else {
+          setTrailSuggestions([]);
+          setShowTrailDropdown(false);
+          setState(prev => ({
+            ...prev,
+            searchMessage: 'No existing record found in Trail. Fill details to create new.'
+          }));
         }
+      } else {
+        setState(prev => ({ ...prev, searchMessage: 'Error searching Trail records' }));
       }
-    };
+    } catch (error) {
+      console.error('Trail search error:', error);
+      setState(prev => ({ ...prev, searchMessage: 'Error connecting to server' }));
+    } finally {
+      setState(prev => ({ ...prev, isSearching: false }));
+    }
+  };
 
-    const timer = setTimeout(() => {
-      loadCustomerDetails();
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [state.Mobile_Number, state.isNewRecord]);
-
-  const handleAutoLoadTrailRecord = (record: TrailRecord) => {
+  const handleSelectTrailRecord = (record: TrailRecord) => {
+    // Helper function to convert Zoho's "Yes"/"No" to boolean
     const formatTextToBoolean = (value: any): boolean => {
       if (typeof value === 'string') {
         return value.toLowerCase() === 'yes' || value.toLowerCase() === 'true';
@@ -541,15 +466,31 @@ const FinanceForm: React.FC = () => {
       return !!value;
     };
 
-    // Only load customer details, keep other fields for new entry
+    // Helper to parse Gift_Offer (could be string or array)
+    const parseGiftOffer = (value: any): string[] => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+          return value.split(',').map((v: string) => v.trim()).filter(Boolean);
+        }
+      }
+      return [];
+    };
+
+    // Populate fields from existing record BUT generate new token
     setState(prev => ({
       ...prev,
-      // Load only customer details
+      // Customer Details (from existing record)
       Name: record.Name || '',
       Last_Name: record.Last_Name || '',
       Fathers_Name: record.Fathers_Name || '',
+      Mobile_Number: record.Mobile_Number || '',
       Contact_Number: record.Contact_Number || '',
-      Email_Address: record.Email_Address || '',
+      Email: record.Email || '',
       Secondary_Email: record.Secondary_Email || '',
       Address: record.Address || '',
       District: record.District || '',
@@ -563,34 +504,120 @@ const FinanceForm: React.FC = () => {
       Salesman_Name: record.Salesman_Name || '',
       Salesman_Name_2: record.Salesman_Name_2 || '',
 
-      // DO NOT load financial, product, delivery, or scheme details
-      // Keep them as new entries
+      // Financial Details
+      Bill_Amount: record.Bill_Amount || 0,
+      Approx_Advance: record.Approx_Advance || 0,
+      Balance: record.Balance || 0,
+      Bank_Amt: record.Bank_Amt || 0,
+      Total_Cash_Received: record.Total_Cash_Received || 0,
+      Other_Payment_mode_recd: record.Other_Payment_mode_recd || 0,
+      Cheque_Amt: record.Cheque_Amt || 0,
+      Down_Payment_1: record.Down_Payment_1 || 0,
+      Down_Payment_2: record.Down_Payment_2 || 0,
+      Down_Payment_3: record.Down_Payment_3 || 0,
+      Down_Payment_4: record.Down_Payment_4 || 0,
+      Down_Payment_5: record.Down_Payment_5 || 0,
+      Mode_Of_Payment: record.Mode_Of_Payment || 'Cash',
+      Finance_By1: record.Finance_By1 || '',
+      Finance_By: record.Finance_By ? record.Finance_By.split(',').map((item: string) => item.trim()) : [],
+      EMI_Start_Date: record.EMI_Start_Date || '',
+      EMI_End_Date: record.EMI_End_Date || '',
+      Limit: record.Limit || 0,
+      Limit_Approved: formatTextToBoolean(record.Limit_Approved),
 
-      // Set search message
-      searchMessage: '✓ Customer details loaded from existing record. Other fields are for new entry.',
-      selectedRecordId: record.id,
-      isNewRecord: false
+      // Product Details
+      SKU1: record.SKU1 || '',
+      SKU2: record.SKU2 || '',
+      SKU3: record.SKU3 || '',
+      SKU4: record.SKU4 || '',
+      SKU5: record.SKU5 || '',
+      Model_No: record.Model_No || '',
+      Model_No_2: record.Model_No_2 || '',
+      Model_No_3: record.Model_No_3 || '',
+      Model_No_4: record.Model_No_4 || '',
+      Model_No_5: record.Model_No_5 || '',
+      Serial_No: record.Serial_No || '',
+      Serial_Number_2: record.Serial_Number_2 || '',
+      Serial_No_3: record.Serial_No_3 || '',
+      Serial_No_4: record.Serial_No_4 || '',
+      Serial_No_5: record.Serial_No_5 || '',
+      Rate_1: record.Rate_1 || 0,
+      Rate_2: record.Rate_2 || 0,
+      Rate_3: record.Rate_3 || 0,
+      Rate_4: record.Rate_4 || 0,
+      Rate_5: record.Rate_5 || 0,
+      Prod_Category: record.Prod_Category || '',
+      Multi_Product: formatTextToBoolean(record.Multi_Product),
+      Company_Brand: record.Company_Brand || '',
+      Discount1: formatTextToBoolean(record.Discount1),
+      Under_Exchange: formatTextToBoolean(record.Under_Exchange),
+      Previous_Loan: formatTextToBoolean(record.Previous_Loan),
+      One_Assist: record.One_Assist || '',
+      One_Assist_Amount: record.One_Assist_Amount || 0,
+      Diwali_2024_Spin: record.Diwali_2024_Spin || '',
+
+      // Delivery Details - convert from text to boolean
+      Delivery: formatTextToBoolean(record.Delivery),
+      Delivery_On: record.Delivery_On || '',
+      Delivery_Later: formatTextToBoolean(record.Delivery_Later),
+      Delivered: formatTextToBoolean(record.Delivered),
+      Ok_for_Delivery: formatTextToBoolean(record.Ok_for_Delivery),
+      Location_Of_Delivery: record.Location_Of_Delivery || '',
+
+      // Scheme Details
+      Scheme_Offered: record.Scheme_Offered || '',
+      Scheme_Number: record.Scheme_Number || '',
+      Gift_Name: record.Gift_Name || '',
+      Gift_Number: record.Gift_Number || '',
+      Gifts_on_Air: record.Gifts_on_Air || '',
+      Spin_Wheel_Gifts: record.Spin_Wheel_Gifts || '',
+      Rs_1000_Cashback: formatTextToBoolean(record.Rs_1000_Cashback),
+      Rs_2000_Cashback: formatTextToBoolean(record.Rs_2000_Cashback),
+      Redeemed: formatTextToBoolean(record.Redeemed),
+      Redeemed_Cashback: record.Redeemed_Cashback || 0,
+      Gift_Contribution: record.Gift_Contribution || '',
+      Gift_Offer: parseGiftOffer(record.Gift_Offer),
+
+      // Claim Details
+      Claim_No_1: record.Claim_No_1 || '',
+      Claim_No_2: record.Claim_No_2 || '',
+      Claim_No_3: record.Claim_No_3 || '',
+      Claim_No_4: record.Claim_No_4 || '',
+      Claim_No_5: record.Claim_No_5 || '',
+      Delivered_Company_Scheme: formatTextToBoolean(record.Delivered_Company_Scheme),
+      Delivered_DDS: formatTextToBoolean(record.Delivered_DDS),
+
+      // Generate NEW token number for the new record
+      Toeken_number: generateTokenNumber(),
+
+      // Reset other metadata fields to avoid updating existing record
+      Trial_ID: '',
+      INVOICE_NUMBER: '',
+      Sales_Order_Number: '',
+      Owner: '', // Reset Owner to avoid issues
+      Stage: 'New',
+
+      // Reset file
+      Record_Image: null,
+
+      searchMessage: `✓ Loaded details from existing record. Creating NEW record with new token: ${generateTokenNumber()}`
     }));
 
     setShowTrailDropdown(false);
-  };
-
-  const handleSelectTrailRecord = (record: TrailRecord) => {
-    handleAutoLoadTrailRecord(record);
   };
 
   const handleNewRecord = () => {
     // Reset form but keep mobile number
     const mobile = state.Mobile_Number;
 
-    setState(prev => ({
-      ...prev,
-      // Reset all fields except mobile number
+    setState({
+      // Reset all fields
       Name: '',
       Last_Name: '',
       Fathers_Name: '',
+      Mobile_Number: mobile, // Keep mobile
       Contact_Number: '',
-      Email_Address: '',
+      Email: '',
       Secondary_Email: '',
       Address: '',
       District: '',
@@ -604,7 +631,6 @@ const FinanceForm: React.FC = () => {
       Salesman_Name: '',
       Salesman_Name_2: '',
 
-      // Reset financial details
       Bill_Amount: 0,
       Approx_Advance: 0,
       Balance: 0,
@@ -625,8 +651,6 @@ const FinanceForm: React.FC = () => {
       Limit: 0,
       Limit_Approved: false,
 
-      // Reset product details
-      Product: '',
       SKU1: '',
       SKU2: '',
       SKU3: '',
@@ -657,7 +681,6 @@ const FinanceForm: React.FC = () => {
       One_Assist_Amount: 0,
       Diwali_2024_Spin: '',
 
-      // Reset delivery details
       Delivery: false,
       Delivery_On: '',
       Delivery_Later: false,
@@ -665,7 +688,6 @@ const FinanceForm: React.FC = () => {
       Ok_for_Delivery: false,
       Location_Of_Delivery: '',
 
-      // Reset scheme details
       Scheme_Offered: '',
       Scheme_Number: '',
       Gift_Name: '',
@@ -679,7 +701,6 @@ const FinanceForm: React.FC = () => {
       Gift_Contribution: '',
       Gift_Offer: [],
 
-      // Reset claim details
       Claim_No_1: '',
       Claim_No_2: '',
       Claim_No_3: '',
@@ -688,7 +709,6 @@ const FinanceForm: React.FC = () => {
       Delivered_Company_Scheme: false,
       Delivered_DDS: false,
 
-      // Generate new token
       Toeken_number: generateTokenNumber(),
       Trial_ID: '',
       INVOICE_NUMBER: '',
@@ -698,122 +718,14 @@ const FinanceForm: React.FC = () => {
 
       Record_Image: null,
 
-      searchMessage: 'Creating new record. Fill all details below.',
+      isSearching: false,
+      isSubmitting: false,
       selectedRecordId: null,
-      isNewRecord: true
-    }));
+      searchMessage: 'Creating new Trail record. Fill details below.'
+    });
 
-    // Reset product rows
-    setProductRows([{ id: 'product-1', productName: '', sku: '', modelNo: '', rate: 0 }]);
-    setProductSuggestions({});
-    setSearchingProduct({});
     setShowTrailDropdown(false);
     setTrailSuggestions([]);
-  };
-
-  // Update product row
-  const updateProductRow = (id: string, updates: Partial<ProductRow>) => {
-    setProductRows(prev =>
-      prev.map(row =>
-        row.id === id ? { ...row, ...updates } : row
-      )
-    );
-  };
-
-  // Handle product search with debouncing
-  const handleProductSearch = useCallback(async (rowIndex: number, keyword: string) => {
-    if (keyword.length < 2) {
-      setProductSuggestions(prev => {
-        const copy = { ...prev };
-        delete copy[rowIndex];
-        return copy;
-      });
-      setSearchingProduct(prev => ({ ...prev, [rowIndex]: false }));
-      return;
-    }
-
-    setSearchingProduct(prev => ({ ...prev, [rowIndex]: true }));
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/products/search?keyword=${encodeURIComponent(keyword)}`
-      );
-
-      const data = await response.json();
-
-      if (data.success && data.products) {
-        setProductSuggestions(prev => ({
-          ...prev,
-          [rowIndex]: data.products
-        }));
-      } else {
-        setProductSuggestions(prev => {
-          const copy = { ...prev };
-          delete copy[rowIndex];
-          return copy;
-        });
-      }
-    } catch (error) {
-      console.error('Product search error:', error);
-      setProductSuggestions(prev => {
-        const copy = { ...prev };
-        delete copy[rowIndex];
-        return copy;
-      });
-    } finally {
-      setSearchingProduct(prev => ({ ...prev, [rowIndex]: false }));
-    }
-  }, []);
-
-  // Select product suggestion
-  const selectProductSuggestion = (rowIndex: number, rowId: string, product: Product) => {
-    updateProductRow(rowId, {
-      productName: product.name,
-      sku: product.sku,
-      modelNo: product.model_no,
-      rate: product.rate
-    });
-
-    // Clear suggestions for this row
-    setProductSuggestions(prev => {
-      const copy = { ...prev };
-      delete copy[rowIndex];
-      return copy;
-    });
-
-    // Update category and brand for first product
-    if (rowIndex === 0) {
-      setState(prev => ({
-        ...prev,
-        Prod_Category: product.category,
-        Company_Brand: product.brand
-      }));
-    }
-
-    // 🔥 AUTO-UPDATE BILL AMOUNT WHEN PRODUCT 1 IS SELECTED
-    if (rowIndex === 0) {
-      setState(prev => ({
-        ...prev,
-        Bill_Amount: product.rate,
-        Approx_Advance: 0,
-        Balance: product.rate
-      }));
-    }
-  };
-
-
-  // Remove product row (only for rows beyond the first)
-  const removeProductRow = (id: string, index: number) => {
-    if (index === 0) return; // Cannot remove first product
-
-    setProductRows(prev => prev.filter(row => row.id !== id));
-
-    // Clear suggestions for this row
-    setProductSuggestions(prev => {
-      const copy = { ...prev };
-      delete copy[index];
-      return copy;
-    });
   };
 
   // Handle File Upload
@@ -843,21 +755,16 @@ const FinanceForm: React.FC = () => {
       return;
     }
 
-    if (!productRows[0]?.productName) {
-      alert('Please select a product for Product 1');
-      return;
-    }
-
     setState(prev => ({ ...prev, isSubmitting: true }));
 
     try {
       // Prepare FormData
       const formData = new FormData();
 
-      // Add all state fields to FormData
+      // Add all fields to FormData
       Object.keys(state).forEach(key => {
         if (key !== 'Record_Image' && key !== 'isSearching' && key !== 'isSubmitting' &&
-          key !== 'selectedRecordId' && key !== 'searchMessage' && key !== 'isNewRecord') {
+          key !== 'selectedRecordId' && key !== 'searchMessage') {
           const value = state[key as keyof FinanceState];
           if (Array.isArray(value)) {
             formData.append(key, JSON.stringify(value));
@@ -873,8 +780,11 @@ const FinanceForm: React.FC = () => {
         formData.append('Record_Image', state.Record_Image);
       }
 
+      // Determine endpoint based on whether updating or creating
+      const endpoint = '/trail/create';
+
       const response = await fetch(
-        `${API_BASE_URL}/trail/create`,
+        `${process.env.REACT_APP_API_URL || 'http://localhost:5000/api'}${endpoint}`,
         {
           method: 'POST',
           body: formData
@@ -907,10 +817,10 @@ const FinanceForm: React.FC = () => {
         <div className="max-w-md w-full bg-white shadow-2xl p-10 text-center rounded-sm border border-gray-200">
           <CheckCircle2 size={60} className="text-green-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            New Record Created!
+            {state.selectedRecordId ? 'Trail Record Updated!' : 'New Trail Record Created!'}
           </h2>
           <p className="text-gray-700 mb-6">
-            Form No. 26 has been successfully added.
+            Form No. 26 has been successfully {state.selectedRecordId ? 'updated in' : 'added to'} Trail.
           </p>
           <div className="space-y-3 mb-6">
             <div className="text-left bg-gray-50 p-4 rounded">
@@ -930,24 +840,24 @@ const FinanceForm: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen font-sans">
+    <div className="bg-gray-100 min-h-screen p-4 md:p-10 font-sans">
       <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-sm overflow-hidden border border-gray-200">
         {/* Header */}
-        <div className="bg-black text-white px-8 py-4 flex items-center justify-between shadow-sm">
+        <div className="bg-[#1a472a] text-white px-8 py-4 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
             <Wallet size={24} />
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Form No. 26 - Finance</h1>
-              <div className="text-sm opacity-90">Complete Module</div>
+              <div className="text-sm opacity-90">Complete Trail Module</div>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {!state.isNewRecord && (
-              <div className="text-sm bg-blue-700 px-3 py-1 rounded-full flex items-center gap-1">
-                <CheckCircle2 size={14} /> Customer Details Loaded
+            {state.selectedRecordId && (
+              <div className="text-sm bg-green-700 px-3 py-1 rounded-full flex items-center gap-1">
+                <CheckCircle2 size={14} /> Updating Record
               </div>
             )}
-            <div className="text-sm bg-green-700 px-3 py-1 rounded-full">
+            <div className="text-sm bg-gray-700 px-3 py-1 rounded-full">
               Token: {state.Toeken_number}
             </div>
           </div>
@@ -957,7 +867,7 @@ const FinanceForm: React.FC = () => {
           {/* Mobile Search Section */}
           <div className="border border-gray-300 rounded-sm p-6 bg-green-50">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Search size={20} /> Customer Search
+              <Search size={20} /> Search in Trail
             </h2>
             <div className="mb-4 relative">
               <label className={`${labelClass} text-lg`}>Mobile Number <span className="text-red-600">*</span></label>
@@ -966,21 +876,43 @@ const FinanceForm: React.FC = () => {
                   <input
                     type="text"
                     className={inputClass}
-                    placeholder="Enter 10 digit mobile number"
+                    placeholder="Enter 10 digit mobile number to search in Trail"
                     value={state.Mobile_Number}
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, '');
                       if (value.length <= 10) {
-                        setState(prev => ({ ...prev, Mobile_Number: value, isNewRecord: true }));
-                        setTrailSuggestions([]);
-                        setShowTrailDropdown(false);
+                        setState(prev => ({ ...prev, Mobile_Number: value }));
+
+                        // Clear suggestions when typing
+                        if (value.length === 10) {
+                          setTrailSuggestions([]);
+                          setShowTrailDropdown(false);
+                          setState(prev => ({ ...prev, searchMessage: '' }));
+                        } else {
+                          setTrailSuggestions([]);
+                          setShowTrailDropdown(false);
+                        }
                       }
                     }}
                     maxLength={10}
-                    required
+                    onBlur={() => {
+                      if (state.Mobile_Number.length === 10 && !state.selectedRecordId) {
+                        handleTrailSearch();
+                      }
+                    }}
                   />
                   {state.isSearching && (
                     <Loader2 className="absolute right-10 top-2.5 animate-spin text-green-500" size={18} />
+                  )}
+                  {!state.isSearching && state.Mobile_Number.length === 10 && (
+                    <button
+                      type="button"
+                      onClick={handleTrailSearch}
+                      className="absolute right-3 top-2.5 text-green-600 hover:text-green-800 transition-colors"
+                      title="Search in Trail"
+                    >
+                      <Search size={18} />
+                    </button>
                   )}
                 </div>
                 <button
@@ -988,7 +920,7 @@ const FinanceForm: React.FC = () => {
                   onClick={handleNewRecord}
                   className="px-4 py-2 border border-green-600 text-green-600 hover:bg-green-50 rounded-sm font-medium transition-colors"
                 >
-                  Clear & New
+                  New Record
                 </button>
               </div>
 
@@ -996,14 +928,8 @@ const FinanceForm: React.FC = () => {
               {showTrailDropdown && trailSuggestions.length > 0 && (
                 <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 shadow-2xl rounded-sm overflow-hidden animate-in fade-in duration-200">
                   <div className="max-h-60 overflow-y-auto">
-                    <div className="px-4 py-2 bg-gray-100 text-sm font-bold text-gray-700 flex justify-between items-center">
-                      <span>Found {trailSuggestions.length} record(s)</span>
-                      <button
-                        onClick={() => setShowTrailDropdown(false)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <X size={16} />
-                      </button>
+                    <div className="px-4 py-2 bg-gray-100 text-sm font-bold text-gray-700">
+                      Found {trailSuggestions.length} record(s) in Trail
                     </div>
                     {trailSuggestions.map((record) => (
                       <div
@@ -1020,6 +946,7 @@ const FinanceForm: React.FC = () => {
                               <div className="flex items-center gap-1">
                                 <Phone size={12} />
                                 {record.Mobile_Number}
+                                {record.Contact_Number && ` / ${record.Contact_Number}`}
                               </div>
                               {record.Email && (
                                 <div className="flex items-center gap-1">
@@ -1034,13 +961,21 @@ const FinanceForm: React.FC = () => {
                                 </div>
                               )}
                             </div>
+                            <div className="text-xs text-gray-500 mt-2">
+                              <div className="flex gap-2">
+                                <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Bill: ₹{record.Bill_Amount}</span>
+                                {record.Toeken_number && (
+                                  <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded">Token: {record.Toeken_number}</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           <div className="text-right">
                             <div className="text-xs font-mono text-green-600 bg-green-50 px-2 py-1 rounded">
                               Limit Approved: {record.Limit_Approved || '0'}
                             </div>
-                            {/* <div className="text-xs text-blue-600 font-medium">
-                              Click to load customer details
+                            {/* <div className="text-xs text-gray-400 mt-1">
+                              Click to load
                             </div> */}
                           </div>
                         </div>
@@ -1053,8 +988,8 @@ const FinanceForm: React.FC = () => {
               {/* Search Message */}
               {state.searchMessage && !showTrailDropdown && (
                 <div className={`mt-2 text-xs font-semibold px-3 py-2 rounded ${state.searchMessage.includes('✓')
-                  ? 'bg-green-50 text-green-700 border border-green-200'
-                  : 'bg-blue-50 text-blue-700 border border-blue-200'
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                   }`}>
                   {state.searchMessage}
                 </div>
@@ -1122,26 +1057,34 @@ const FinanceForm: React.FC = () => {
                 <label className={labelClass}>Mobile Number <span className="text-red-600">*</span></label>
                 <input
                   type="text"
-                  className={`${inputClass} bg-gray-50`}
+                  className={inputClass}
                   placeholder="10 digit mobile"
                   value={state.Mobile_Number}
-                  readOnly
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 10) {
+                      setState(prev => ({ ...prev, Mobile_Number: value }));
+                    }
+                  }}
+                  maxLength={10}
+                  required
                 />
               </div>
 
-              {/* <div>
-                <label className={labelClass}>Alternate Number</label>
+              <div>
+                <label className={labelClass}>Alternate Number <span className="text-red-600">*</span></label>
                 <input
                   type="text"
                   className={inputClass}
                   placeholder="Alternate contact"
                   value={state.Alternate_Number}
+                  required
                   onChange={(e) => setState(prev => ({ ...prev, Alternate_Number: e.target.value.replace(/\D/g, '') }))}
                   maxLength={10}
                 />
-              </div> */}
+              </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Contact Number</label>
                 <input
                   type="text"
@@ -1150,7 +1093,7 @@ const FinanceForm: React.FC = () => {
                   value={state.Contact_Number}
                   onChange={(e) => setState(prev => ({ ...prev, Contact_Number: e.target.value.replace(/\D/g, '') }))}
                 />
-              </div> */}
+              </div>
 
               <div>
                 <label className={labelClass}>Email</label>
@@ -1158,8 +1101,8 @@ const FinanceForm: React.FC = () => {
                   type="email"
                   className={inputClass}
                   placeholder="demo@email.com"
-                  value={state.Email_Address}
-                  onChange={(e) => setState(prev => ({ ...prev, Email_Address: e.target.value }))}
+                  value={state.Email}
+                  onChange={(e) => setState(prev => ({ ...prev, Email: e.target.value }))}
                 />
               </div>
 
@@ -1175,10 +1118,11 @@ const FinanceForm: React.FC = () => {
               </div>
 
               <div>
-                <label className={labelClass}>Address Type</label>
+                <label className={labelClass}>Address Type <span className="text-red-600">*</span></label>
                 <select
                   className={selectClass}
                   value={state.Address_Type}
+                  required
                   onChange={(e) => setState(prev => ({ ...prev, Address_Type: e.target.value }))}
                 >
                   <option value="">-Select-</option>
@@ -1200,12 +1144,13 @@ const FinanceForm: React.FC = () => {
               </div>
 
               <div>
-                <label className={labelClass}>Location</label>
+                <label className={labelClass}>Location <span className="text-red-600">*</span></label>
                 <input
                   type="text"
                   className={inputClass}
                   placeholder="City/Location"
                   value={state.Location}
+                  required
                   onChange={(e) => setState(prev => ({ ...prev, Location: e.target.value }))}
                 />
               </div>
@@ -1261,119 +1206,8 @@ const FinanceForm: React.FC = () => {
               <ShoppingBag size={20} /> Product & Purchase Details
             </h2>
 
-            {/* Multi Product Option */}
-            {/* <label className={`${checkboxLabelClass} mb-6`}>
-              <input
-                type="checkbox"
-                className="w-4 h-4 text-green-600"
-                checked={state.Multi_Product}
-                onChange={(e) => setState(prev => ({ ...prev, Multi_Product: e.target.checked }))}
-              />
-              <span className="font-bold">Multi Product (Show Additional Products)</span>
-            </label> */}
-
-            {/* Product Rows */}
-            <div className="space-y-6">
-              {productRows.map((row, idx) => (
-                <div key={row.id} className={`p-4 ${idx === 0 ? 'bg-gray-50' : 'bg-blue-50'} rounded border`}>
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-lg text-gray-900">
-                      Product {idx + 1} {idx === 0 && <span className="text-red-600">*</span>}
-                    </h3>
-                    {idx > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => removeProductRow(row.id, idx)}
-                        className="text-red-600 hover:text-red-800 flex items-center gap-1 text-sm"
-                      >
-                        <Trash2 size={14} /> Remove
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Product Search */}
-                  <div className="mb-4 relative">
-                    <label className={labelClass}>Search Product {idx + 1}</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        className={inputClass}
-                        placeholder="Search for product..."
-                        value={row.productName}
-                        onChange={e => {
-                          updateProductRow(row.id, { productName: e.target.value });
-                          handleProductSearch(idx, e.target.value);
-                        }}
-                        required={idx === 0}
-                      />
-                      {searchingProduct[idx] && (
-                        <Loader2 className="absolute right-10 top-2.5 animate-spin text-green-500" size={18} />
-                      )}
-                      <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
-                    </div>
-
-                    {/* Product Suggestions Dropdown */}
-                    {productSuggestions[idx] && productSuggestions[idx].length > 0 && (
-                      <div className="absolute z-20 left-0 right-0 top-full bg-white border border-gray-300 shadow-2xl mt-1 overflow-hidden rounded-sm">
-                        {productSuggestions[idx].map(p => (
-                          <div
-                            key={p.id}
-                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-none flex justify-between items-center"
-                            onClick={() => selectProductSuggestion(idx, row.id, p)}
-                          >
-                            <div>
-                              <div className="text-sm font-bold text-gray-900">{p.name}</div>
-                              <div className="text-[10px] text-gray-500 font-mono uppercase">{p.sku}</div>
-                            </div>
-                            <div className="text-sm font-black text-blue-600">₹{p.rate}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Product Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className={labelClass}>SKU {idx + 1}</label>
-                      <input
-                        type="text"
-                        className={`${inputClass} bg-gray-50`}
-                        value={row.sku}
-                        readOnly
-                      />
-                    </div>
-
-                    <div>
-                      <label className={labelClass}>Model No. {idx + 1}</label>
-                      <input
-                        type="text"
-                        className={`${inputClass} bg-gray-50`}
-                        value={row.modelNo}
-                        readOnly
-                      />
-                    </div>
-
-                    <div>
-                      <label className={labelClass}>Rate {idx + 1}</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
-                        <input
-                          type="number"
-                          className={`${inputClass} pl-8 bg-gray-50`}
-                          placeholder="0.00"
-                          value={row.rate || ''}
-                          readOnly
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
             {/* Additional Options */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <label className={checkboxLabelClass}>
                   <input
@@ -1408,12 +1242,14 @@ const FinanceForm: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className={labelClass}>Company/Brand</label>
+                  <label className={labelClass}>Company/Brand <span className="text-red-600">*</span></label>
                   <input
                     type="text"
-                    className={`${inputClass} bg-gray-50`}
+                    className={inputClass}
+                    placeholder="Brand name"
+                    required
                     value={state.Company_Brand}
-                    readOnly
+                    onChange={(e) => setState(prev => ({ ...prev, Company_Brand: e.target.value }))}
                   />
                 </div>
 
@@ -1432,7 +1268,7 @@ const FinanceForm: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className={labelClass}>One Assist Amount</label>
                 <div className="relative">
@@ -1447,7 +1283,7 @@ const FinanceForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Diwali 2024 Spin %</label>
                 <select
                   className={selectClass}
@@ -1461,19 +1297,147 @@ const FinanceForm: React.FC = () => {
                   <option value="50%">50%</option>
                   <option value="100%">100%</option>
                 </select>
-              </div> */}
+              </div>
             </div>
 
-            {/* Product Category (auto-filled from search) */}
-            {/* <div className="mt-6">
-              <label className={labelClass}>Product Category</label>
+            {/* Multi Product Option */}
+            <label className={`${checkboxLabelClass} mb-6`}>
               <input
-                type="text"
-                className={`${inputClass} bg-gray-50`}
-                value={state.Prod_Category}
-                readOnly
+                type="checkbox"
+                className="w-4 h-4 text-green-600"
+                checked={state.Multi_Product}
+                onChange={(e) => setState(prev => ({ ...prev, Multi_Product: e.target.checked }))}
               />
-            </div> */}
+              <span className="font-bold">Multi Product (Show Additional Products)</span>
+            </label>
+
+            {/* Product 1 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded">
+              <div>
+                <label className={labelClass}>Product 1 <span className="text-red-600">*</span></label>
+                <input
+                  type="text"
+                  className={inputClass}
+                  value={state.Product}
+                  required
+                  onChange={(e) => setState(prev => ({ ...prev, Product: e.target.value }))}
+                />
+              </div>
+              
+              <div>
+                <label className={labelClass}>SKU 1 <span className="text-red-600">*</span></label>
+                <input
+                  type="text"
+                  className={inputClass}
+                  value={state.SKU1}
+                  required
+                  onChange={(e) => setState(prev => ({ ...prev, SKU1: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>Model No. 1  <span className="text-red-600">*</span></label>
+                <input
+                  type="text"
+                  className={inputClass}
+                  value={state.Model_No}
+                  required
+                  onChange={(e) => setState(prev => ({ ...prev, Model_No: e.target.value }))}
+                />
+              </div>
+
+              {/* <div>
+                <label className={labelClass}>Serial No. 1</label>
+                <input
+                  type="text"
+                  className={inputClass}
+                  value={state.Serial_No}
+                  onChange={(e) => setState(prev => ({ ...prev, Serial_No: e.target.value }))}
+                />
+              </div> */}
+
+              <div>
+                <label className={labelClass}>Rate 1 <span className="text-red-600">*</span></label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
+                  <input
+                    type="number"
+                    className={`${inputClass} pl-8`}
+                    placeholder="0.00"
+                    required
+                    value={state.Rate_1 || ''}
+                    onChange={(e) => setState(prev => ({ ...prev, Rate_1: Number(e.target.value) }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Products (conditional) */}
+            {state.Multi_Product && (
+              <div className="space-y-6 mt-6">
+                {[2, 3, 4, 5].map((num) => (
+                  <div key={num} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded bg-blue-50">
+                    <div>
+                      <label className={labelClass}>SKU {num}</label>
+                      <input
+                        type="text"
+                        className={inputClass}
+                        value={state[`SKU${num}` as keyof FinanceState] as string || ''}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          [`SKU${num}`]: e.target.value
+                        }))}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Model No. {num}</label>
+                      <input
+                        type="text"
+                        className={inputClass}
+                        value={state[`Model_No_${num}` as keyof FinanceState] as string || ''}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          [`Model_No_${num}`]: e.target.value
+                        }))}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Serial No. {num}</label>
+                      <input
+                        type="text"
+                        className={inputClass}
+                        value={state[`Serial_No_${num}` as keyof FinanceState] as string || ''}
+                        onChange={(e) => setState(prev => ({
+                          ...prev,
+                          [`Serial_No_${num}`]: e.target.value
+                        }))}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Rate {num}</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
+                        <input
+                          type="number"
+                          className={`${inputClass} pl-8`}
+                          placeholder="0.00"
+                          value={state[`Rate_${num}` as keyof FinanceState] as number || ''}
+                          onChange={(e) => setState(prev => ({
+                            ...prev,
+                            [`Rate_${num}`]: Number(e.target.value)
+                          }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Product Category */}
             <div className="mt-6">
               <label className={labelClass}>Product Category <span className="text-red-600">*</span></label>
               <select
@@ -1522,13 +1486,14 @@ const FinanceForm: React.FC = () => {
 
               {/* Approx Advance */}
               <div>
-                <label className={labelClass}>Approx Advance</label>
+                <label className={labelClass}>Approx Advance <span className="text-red-600">*</span></label>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-gray-500">₹</span>
                   <input
                     type="number"
                     className={`${inputClass} pl-8`}
                     placeholder="0.00"
+                    required
                     value={state.Approx_Advance || ''}
                     onChange={(e) => setState(prev => ({ ...prev, Approx_Advance: Number(e.target.value) }))}
                   />
@@ -1550,7 +1515,7 @@ const FinanceForm: React.FC = () => {
               </div>
 
               {/* Down Payments */}
-              {/* <div className="md:col-span-3 pt-6 border-t">
+              <div className="md:col-span-3 pt-6 border-t">
                 <h3 className="font-bold text-gray-700 mb-4">Down Payments</h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {[1, 2, 3, 4, 5].map((num) => (
@@ -1569,7 +1534,7 @@ const FinanceForm: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              </div> */}
+              </div>
 
               {/* Finance Details */}
               <div className="md:col-span-3 pt-6 border-t">
@@ -1631,7 +1596,7 @@ const FinanceForm: React.FC = () => {
                     </div>
                   </div>
 
-                  <div>
+                  {/* <div>
                     <label className={labelClass}>Limit</label>
                     <input
                       type="number"
@@ -1640,7 +1605,7 @@ const FinanceForm: React.FC = () => {
                       value={state.Limit || ''}
                       onChange={(e) => setState(prev => ({ ...prev, Limit: Number(e.target.value) }))}
                     />
-                  </div>
+                  </div> */}
 
                   {/* <div>
                     <label className={labelClass}>Limit Approved</label>
@@ -1661,11 +1626,11 @@ const FinanceForm: React.FC = () => {
           {/* Section 4: Scheme & Gift Details */}
           <div className="border border-gray-300 rounded-sm p-6">
             <h2 className={sectionHeaderClass}>
-              <GiftIcon size={20} /> Scheme
+              <GiftIcon size={20} /> Scheme & Gift Details
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* <div>
+              <div>
                 <label className={labelClass}>Scheme Offered</label>
                 <select
                   className={selectClass}
@@ -1677,7 +1642,7 @@ const FinanceForm: React.FC = () => {
                   <option value="Stabilizer Installation Combo Offer">Stabilizer Installation Combo Offer</option>
                   <option value="test">Test Scheme</option>
                 </select>
-              </div> */}
+              </div>
 
               <div>
                 <label className={labelClass}>Scheme Number</label>
@@ -1689,7 +1654,7 @@ const FinanceForm: React.FC = () => {
                 />
               </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Gift Contribution Amount</label>
                 <input
                   type="text"
@@ -1698,9 +1663,9 @@ const FinanceForm: React.FC = () => {
                   value={state.Gift_Contribution}
                   onChange={(e) => setState(prev => ({ ...prev, Gift_Contribution: e.target.value }))}
                 />
-              </div> */}
+              </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Assured Gifts List</label>
                 <select
                   className={selectClass}
@@ -1717,9 +1682,9 @@ const FinanceForm: React.FC = () => {
                   <option value="Intex Iron">Intex Iron</option>
                 </select>
                 <div className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</div>
-              </div> */}
+              </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Gift Name</label>
                 <input
                   type="text"
@@ -1727,9 +1692,9 @@ const FinanceForm: React.FC = () => {
                   value={state.Gift_Name}
                   onChange={(e) => setState(prev => ({ ...prev, Gift_Name: e.target.value }))}
                 />
-              </div> */}
+              </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Gift Number</label>
                 <input
                   type="text"
@@ -1737,9 +1702,9 @@ const FinanceForm: React.FC = () => {
                   value={state.Gift_Number}
                   onChange={(e) => setState(prev => ({ ...prev, Gift_Number: e.target.value }))}
                 />
-              </div> */}
+              </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Gifts on Air</label>
                 <input
                   type="text"
@@ -1747,9 +1712,9 @@ const FinanceForm: React.FC = () => {
                   value={state.Gifts_on_Air}
                   onChange={(e) => setState(prev => ({ ...prev, Gifts_on_Air: e.target.value }))}
                 />
-              </div> */}
+              </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Spin Wheel Gifts</label>
                 <select
                   className={selectClass}
@@ -1762,7 +1727,7 @@ const FinanceForm: React.FC = () => {
                   <option value="30%">30%</option>
                   <option value="50%">50%</option>
                 </select>
-              </div> */}
+              </div>
 
               <div className="md:col-span-2 space-y-3">
                 <label className={checkboxLabelClass}>
@@ -1819,99 +1784,48 @@ const FinanceForm: React.FC = () => {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-              {/* LEFT SIDE — RADIO BUTTONS */}
               <div className="space-y-4">
-
-                {/* Delivery Required */}
                 <label className={checkboxLabelClass}>
                   <input
-                    type="radio"
-                    name="delivery_status"
+                    type="checkbox"
                     className="w-4 h-4 text-green-600"
-                    checked={state.Delivery === true}
-                    onChange={() =>
-                      setState(prev => ({
-                        ...prev,
-                        Delivery: true,
-                        Delivery_Later: false,
-                        Delivered: false,
-                        Ok_for_Delivery: false
-                      }))
-                    }
+                    checked={state.Delivery}
+                    onChange={(e) => setState(prev => ({ ...prev, Delivery: e.target.checked }))}
                   />
                   <span>Delivery Required</span>
                 </label>
 
-                {/* Delivery Later */}
                 <label className={checkboxLabelClass}>
                   <input
-                    type="radio"
-                    name="delivery_status"
+                    type="checkbox"
                     className="w-4 h-4 text-green-600"
-                    checked={state.Delivery_Later === true}
-                    onChange={() =>
-                      setState(prev => ({
-                        ...prev,
-                        Delivery: false,
-                        Delivery_Later: true,
-                        Delivered: false,
-                        Ok_for_Delivery: false,
-                        Delivery_On: "",
-                        Location_Of_Delivery: ""
-                      }))
-                    }
+                    checked={state.Delivery_Later}
+                    onChange={(e) => setState(prev => ({ ...prev, Delivery_Later: e.target.checked }))}
                   />
                   <span>Delivery Later</span>
                 </label>
 
-                {/* Delivered */}
                 <label className={checkboxLabelClass}>
                   <input
-                    type="radio"
-                    name="delivery_status"
+                    type="checkbox"
                     className="w-4 h-4 text-green-600"
-                    checked={state.Delivered === true}
-                    onChange={() =>
-                      setState(prev => ({
-                        ...prev,
-                        Delivery: false,
-                        Delivery_Later: false,
-                        Delivered: true,
-                        Ok_for_Delivery: false,
-                        Delivery_On: "",
-                        Location_Of_Delivery: ""
-                      }))
-                    }
+                    checked={state.Delivered}
+                    onChange={(e) => setState(prev => ({ ...prev, Delivered: e.target.checked }))}
                   />
                   <span>Delivered</span>
                 </label>
 
-                {/* OK for Delivery */}
                 <label className={checkboxLabelClass}>
                   <input
-                    type="radio"
-                    name="delivery_status"
+                    type="checkbox"
                     className="w-4 h-4 text-green-600"
-                    checked={state.Ok_for_Delivery === true}
-                    onChange={() =>
-                      setState(prev => ({
-                        ...prev,
-                        Delivery: false,
-                        Delivery_Later: false,
-                        Delivered: false,
-                        Ok_for_Delivery: true,
-                        Delivery_On: "",
-                        Location_Of_Delivery: ""
-                      }))
-                    }
+                    checked={state.Ok_for_Delivery}
+                    onChange={(e) => setState(prev => ({ ...prev, Ok_for_Delivery: e.target.checked }))}
                   />
                   <span>OK for Delivery</span>
                 </label>
-
               </div>
 
-              {/* RIGHT SIDE — SHOW ONLY WHEN "Delivery Required" */}
               <div className="space-y-4">
                 {state.Delivery && (
                   <>
@@ -1941,9 +1855,7 @@ const FinanceForm: React.FC = () => {
                   </>
                 )}
               </div>
-
             </div>
-
           </div>
 
           {/* Section 6: Claim Details */}
@@ -1953,7 +1865,7 @@ const FinanceForm: React.FC = () => {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1].map((num) => (
+              {[1, 2, 3, 4, 5].map((num) => (
                 <div key={num}>
                   <label className={labelClass}>Claim No. {num}</label>
                   <input
@@ -2009,7 +1921,7 @@ const FinanceForm: React.FC = () => {
                 />
               </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Trial ID</label>
                 <input
                   type="text"
@@ -2017,7 +1929,7 @@ const FinanceForm: React.FC = () => {
                   value={state.Trial_ID}
                   onChange={(e) => setState(prev => ({ ...prev, Trial_ID: e.target.value }))}
                 />
-              </div> */}
+              </div>
 
               <div>
                 <label className={labelClass}>Invoice Number</label>
@@ -2039,7 +1951,7 @@ const FinanceForm: React.FC = () => {
                 />
               </div>
 
-              {/* <div>
+              <div>
                 <label className={labelClass}>Owner</label>
                 <input
                   type="text"
@@ -2047,7 +1959,7 @@ const FinanceForm: React.FC = () => {
                   value={state.Owner}
                   onChange={(e) => setState(prev => ({ ...prev, Owner: e.target.value }))}
                 />
-              </div> */}
+              </div>
 
               <div>
                 <label className={labelClass}>Stage</label>
@@ -2097,12 +2009,12 @@ const FinanceForm: React.FC = () => {
               {state.isSubmitting ? (
                 <>
                   <Loader2 className="animate-spin" size={20} />
-                  Creating...
+                  {state.selectedRecordId ? 'Updating...' : 'Creating...'}
                 </>
               ) : (
                 <>
                   <CheckCircle2 size={20} />
-                  Create New Record
+                  {state.selectedRecordId ? 'Update Trail Record' : 'Create Trail Record'}
                 </>
               )}
             </button>
