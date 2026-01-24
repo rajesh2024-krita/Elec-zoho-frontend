@@ -1,6 +1,8 @@
 // aiService.ts - UPDATED with automatic extraction
 import { GoogleGenAI } from "@google/genai";
 import { AIProvider, AIConfig, ExtractionResult, FileData, DiscountModel, MonthlyScheme } from "../types";
+import CryptoJS from "crypto-js";
+import axios from "axios";
 
 const SYSTEM_PROMPT = `You are an expert in extracting financial and product information from documents. 
 Extract ALL claim information including pricing, discounts, payouts, and schemes.
@@ -66,6 +68,40 @@ Return:
   }
 ]`;
 
+
+
+let encryptedKey = "";
+
+
+// ================================
+// LOAD ENCRYPTED KEY FROM BACKEND
+// ================================
+export async function loadEncryptedKey() {
+  const res = await axios.get("http://localhost:5000/config/encrypted-key");
+  encryptedKey = res.data.encryptedKey;
+  console.log("🔐 Encrypted key loaded:", encryptedKey);
+}
+
+
+// ================================
+// DECRYPT FUNCTION (crypto-js)
+// ================================
+function decrypt(text: string) {
+  try {
+    const bytes = CryptoJS.AES.decrypt(
+      text,
+      import.meta.env.VITE_AES_SECRET
+    );
+
+
+    const result = bytes.toString(CryptoJS.enc.Utf8);
+    return result;
+  } catch (err) {
+    console.error("Decryption failed:", err);
+    return "";
+  }
+}
+
 export const extractText = async (
   fileData: FileData,
   config: AIConfig
@@ -74,13 +110,22 @@ export const extractText = async (
   const base64Pure = base64.split(',')[1] || base64;
 
   if (config.provider === AIProvider.GEMINI) {
-    const apiKey = config.keys.GEMINI || import.meta.env.VITE_GEMINI_KEY || '';
-    if (!apiKey) throw new Error("No Gemini API key found.");
+    // const apiKey = config.keys.GEMINI || import.meta.env.VITE_GEMINI_KEY || '';
+    // if (!apiKey) throw new Error("No Gemini API key found.");
 
-    const ai = new GoogleGenAI({ apiKey });
-    
+    // 1️⃣ DECRYPT KEY HERE
+    const decryptedKey = decrypt(encryptedKey);
+
+
+    console.log("🔓 Decrypted Gemini Key:", decryptedKey);
+
+
+    if (!decryptedKey) throw new Error("Gemini key decryption failed.");
+
+    const ai = new GoogleGenAI({ apiKey: decryptedKey });
+
     let parts: any[] = [{ text: SYSTEM_PROMPT }];
-    
+
     if (mimeType === 'text/plain' && textContent) {
       parts.push({ text: `Source Text Content:\n${textContent}` });
     } else {
@@ -95,18 +140,18 @@ export const extractText = async (
           responseMimeType: "application/json",
         }
       });
-      
+
       const parsed = JSON.parse(response.text || "{}");
-      
+
       // Calculate missing values
       const enhancedDiscountModels = (parsed.discountModels || []).map((model: any) => {
         const fullPrice = Number(model.fullPrice) || 0;
         const discountPercentage = Number(model.discountPercentage) || 0;
         const payoutAmount = Number(model.payoutAmount) || 0;
-        
+
         let calculatedDiscount = discountPercentage;
         let calculatedPayout = payoutAmount;
-        
+
         // Calculate missing values
         if (fullPrice > 0) {
           if (discountPercentage > 0 && payoutAmount === 0) {
@@ -115,7 +160,7 @@ export const extractText = async (
             calculatedDiscount = (payoutAmount / fullPrice) * 100;
           }
         }
-        
+
         return {
           modelName: model.modelName || "",
           fullPrice,
@@ -153,12 +198,12 @@ export const extractText = async (
       console.error("AI parsing error:", e);
       throw new Error("Failed to parse AI response. Ensure the document contains readable model information.");
     }
-  } 
+  }
 
   // OpenAI/Groq Fallback
   if (config.provider === AIProvider.OPENAI || config.provider === AIProvider.GROQ) {
     const isOpenAI = config.provider === AIProvider.OPENAI;
-    const url = isOpenAI 
+    const url = isOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://api.groq.com/openai/v1/chat/completions";
 
@@ -205,10 +250,10 @@ export const extractText = async (
       const fullPrice = Number(model.fullPrice) || 0;
       const discountPercentage = Number(model.discountPercentage) || 0;
       const payoutAmount = Number(model.payoutAmount) || 0;
-      
+
       let calculatedDiscount = discountPercentage;
       let calculatedPayout = payoutAmount;
-      
+
       if (fullPrice > 0) {
         if (discountPercentage > 0 && payoutAmount === 0) {
           calculatedPayout = fullPrice * (discountPercentage / 100);
@@ -216,7 +261,7 @@ export const extractText = async (
           calculatedDiscount = (payoutAmount / fullPrice) * 100;
         }
       }
-      
+
       return {
         modelName: model.modelName || "",
         fullPrice,
@@ -250,6 +295,7 @@ export const extractText = async (
       modelUsed: config.modelId
     };
   }
+
 
   throw new Error("Unsupported AI Provider.");
 };

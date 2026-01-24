@@ -1,6 +1,9 @@
 // vendorAiService.ts — SAME FORMAT AS aiService.ts (FULL WORKING)
 import { GoogleGenAI } from "@google/genai";
 import { VendorExtractionResult, VendorFileData } from "@/vendorTypes";
+import CryptoJS from "crypto-js";
+import axios from "axios";
+import { AIProvider } from "@/types";
 
 // ---------------- PROMPT ----------------
 const SYSTEM_PROMPT = `
@@ -45,6 +48,39 @@ RULES:
 - Keep missing fields empty "".
 `;
 
+
+let encryptedKey = "";
+
+
+// ================================
+// LOAD ENCRYPTED KEY FROM BACKEND
+// ================================
+export async function loadVendorEncryptedKey() {
+  const res = await axios.get("http://localhost:5000/config/encrypted-key");
+  encryptedKey = res.data.encryptedKey;
+  console.log("🔐 Vendor Encrypted key loaded:", encryptedKey);
+}
+
+
+// ================================
+// DECRYPT FUNCTION (crypto-js)
+// ================================
+function decrypt(text: string) {
+  try {
+    const bytes = CryptoJS.AES.decrypt(
+      text,
+      import.meta.env.VITE_AES_SECRET
+    );
+
+
+    const result = bytes.toString(CryptoJS.enc.Utf8);
+    return result;
+  } catch (err) {
+    console.error("Decryption failed:", err);
+    return "";
+  }
+}
+
 // ---------------- MAIN FUNCTION ----------------
 export const extractVendorInfo = async (
   fileData: VendorFileData,
@@ -54,11 +90,21 @@ export const extractVendorInfo = async (
   const { base64, mimeType, textContent } = fileData;
   const base64Pure = base64.split(",")[1] || base64;
 
-  if (config.provider === "GEMINI") {
-    const apiKey = config.keys.GEMINI || import.meta.env.VITE_GEMINI_KEY;
-    if (!apiKey) throw new Error("No Gemini API key found.");
+  if (config.provider === AIProvider.GEMINI) {
+    // const apiKey = config.keys.GEMINI || import.meta.env.VITE_GEMINI_KEY;
+    // if (!apiKey) throw new Error("No Gemini API key found.");
 
-    const ai = new GoogleGenAI({ apiKey });
+    // 1️⃣ DECRYPT KEY HERE
+    const decryptedKey = decrypt(encryptedKey);
+
+
+    console.log("🔓 Decrypted Gemini Key:", decryptedKey);
+
+
+    if (!decryptedKey) throw new Error("Gemini key decryption failed.");
+
+
+    const ai = new GoogleGenAI({ apiKey: decryptedKey });
 
     // SAME structure as aiService.ts
     let parts: any[] = [{ text: SYSTEM_PROMPT }];

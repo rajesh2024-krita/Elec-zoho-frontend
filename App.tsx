@@ -24,8 +24,8 @@ import {
 
 import { VendorFileData, VendorExtractionResult } from './vendorTypes';
 
-import { extractText } from './services/aiService';
-import { extractVendorInfo } from './services/vendorAiService';
+import { extractText, loadEncryptedKey } from './services/aiService';
+import { extractVendorInfo, loadVendorEncryptedKey } from './services/vendorAiService';
 import Sales from './components/Sales';
 import FinanceForm from './components/FinanceForm';
 
@@ -51,7 +51,7 @@ const AppContent: React.FC = () => {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch {}
+      } catch { }
     }
     return {
       provider: AIProvider.GEMINI,
@@ -118,19 +118,24 @@ const AppContent: React.FC = () => {
     setVendorStep(AppStep.UPLOAD);
   };
 
+  useEffect(() => {
+    loadEncryptedKey();
+    loadVendorEncryptedKey()
+  }, []);
+
   return (
     <Router>
       <Routes>
         {/* Public route */}
         <Route path="/login" element={<Login />} />
-        
+
         {/* Private routes */}
         <Route path="/" element={
           <PrivateRoute>
             <Navigate to="/claim" replace />
           </PrivateRoute>
         } />
-        
+
         <Route path="/claim" element={
           <PrivateRoute>
             <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
@@ -141,7 +146,7 @@ const AppContent: React.FC = () => {
                   onClose={() => setIsSettingsOpen(false)}
                 />
               )}
-              
+
               {claimStep === AppStep.UPLOAD && (
                 <Uploader onImageSelected={handleFileSelected} />
               )}
@@ -161,7 +166,7 @@ const AppContent: React.FC = () => {
             </Layout>
           </PrivateRoute>
         } />
-        
+
         <Route path="/sales" element={
           <PrivateRoute>
             <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
@@ -169,7 +174,7 @@ const AppContent: React.FC = () => {
             </Layout>
           </PrivateRoute>
         } />
-        
+
         <Route path="/finance" element={
           <PrivateRoute>
             <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
@@ -177,7 +182,7 @@ const AppContent: React.FC = () => {
             </Layout>
           </PrivateRoute>
         } />
-        
+
         <Route path="/purchase-order" element={
           <PrivateRoute>
             <Layout config={aiConfig} onOpenSettings={() => setIsSettingsOpen(true)}>
