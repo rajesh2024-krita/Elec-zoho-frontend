@@ -77,7 +77,7 @@ let encryptedKey = "";
 // LOAD ENCRYPTED KEY FROM BACKEND
 // ================================
 export async function loadEncryptedKey() {
-  const res = await axios.get("http://localhost:5000/config/encrypted-key");
+  const res = await axios.get("https://elec-zoho-backend-snowy.vercel.app/config/encrypted-key");
   encryptedKey = res.data.encryptedKey;
   console.log("🔐 Encrypted key loaded:", encryptedKey);
 }
@@ -115,10 +115,6 @@ export const extractText = async (
 
     // 1️⃣ DECRYPT KEY HERE
     const decryptedKey = decrypt(encryptedKey);
-
-
-    console.log("🔓 Decrypted Gemini Key:", decryptedKey);
-
 
     if (!decryptedKey) throw new Error("Gemini key decryption failed.");
 

@@ -346,56 +346,62 @@ export const VendorResultView: React.FC<VendorResultViewProps> = ({ result, file
 
     return missing;
   };
-const handleSubmit = async () => {
-  if (data.GSTIN_NUMBER && !validateGSTIN(data.GSTIN_NUMBER)) {
-    setSubmitError("Invalid GSTIN format.");
-    return;
-  }
 
-  const missingFields = validateRequiredFields();
-  if (missingFields.length > 0) {
-    setSubmitError(`Please fill required fields: ${missingFields.join(", ")}`);
-    return;
-  }
-
-  setSubmitting(true);
-  setSubmitError(null);
-
-  try {
-    const API_ENDPOINT = "https://elec-zoho-backend-snowy.vercel.app/api/vendors";
-
-    const completeVendorData = { ...data, ...additionalVendorData };
-
-    const payload = {
-      vendorData: completeVendorData,
-      purchaseRequestData:
-        showPurchaseSection &&
-        purchaseRequestData.items.some((item) => item.name.trim() !== "")
-          ? purchaseRequestData
-          : null,
-      processed_at: new Date().toISOString(),
-    };
-
-    const response = await axios.post(API_ENDPOINT, payload, {
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (response.status === 200) {
-      setShowSuccess(true);
-    } else {
-      throw new Error(`Server responded ${response.status}`);
+  const handleSubmit = async () => {
+    // Validate GSTIN
+    if (data.GSTIN_NUMBER && !validateGSTIN(data.GSTIN_NUMBER)) {
+      setSubmitError("Invalid GSTIN format. Must be 15 characters (e.g., 08ACAPG1208G1ZI)");
+      return;
     }
-  } catch (err) {
-    console.error("Vendor submission failed:", err);
-    setSubmitError(
-      err.response?.data?.message ||
+
+    // Validate required fields
+    const missingFields = validateRequiredFields();
+    if (missingFields.length > 0) {
+      setSubmitError(`Please fill required fields: ${missingFields.join(", ")}`);
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const API_ENDPOINT = "https://elec-zoho-backend-snowy.vercel.app/api/vendors";
+
+      const formData = new FormData();
+      formData.append("file", file.originalFile);
+      
+      // Combine vendor data with additional fields
+      const completeVendorData = { ...data, ...additionalVendorData };
+      formData.append("vendorData", JSON.stringify(completeVendorData));
+      
+      // Only send purchase request data if section is shown and has items
+      if (showPurchaseSection && purchaseRequestData.items.some(item => item.name.trim() !== "")) {
+        formData.append("purchaseRequestData", JSON.stringify(purchaseRequestData));
+      }
+      
+      formData.append("processed_at", new Date().toISOString());
+
+      const response = await axios.post(API_ENDPOINT, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        setShowSuccess(true);
+      } else {
+        throw new Error(`Server responded ${response.status}`);
+      }
+    } catch (err: any) {
+      console.error("Vendor submission failed:", err);
+      setSubmitError(
+        err.response?.data?.message ||
         err.message ||
         "Failed to create vendor. Please try again."
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Helper functions
   const generateSupplierCode = (name: string): string => {
     if (!name) return "SUP";
@@ -568,6 +574,131 @@ const handleSubmit = async () => {
                 <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider">{file.mimeType.split('/')[1] || 'Document'}</p>
               </div>
             )}
+          </div>
+
+          {/* AI Extraction Summary */}
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-bold text-green-800">AI Extraction Summary</span>
+            </div>
+            <div className="text-sm text-gray-700 space-y-2">
+              <div className="flex justify-between">
+                <span className="font-medium">Vendor Fields Extracted:</span>
+                <span className="font-bold text-green-600">{aiExtractionSummary.vendorFields}/20</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">Purchase Items Found:</span>
+                <span className="font-bold text-blue-600">{aiExtractionSummary.itemsExtracted}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">AI Confidence:</span>
+                <span className="font-bold">{Math.round(aiExtractionSummary.confidence * 100)}%</span>
+              </div>
+              {aiExtractionSummary.itemsExtracted > 0 && (
+                <div className="mt-3 pt-3 border-t border-green-200">
+                  <p className="text-xs font-bold text-green-700 mb-2">Extracted Items Preview:</p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto pr-2">
+                    {result.purchaseRequestData?.items?.slice(0, 5).map((item, index) => (
+                      <div key={index} className="flex justify-between items-center text-xs bg-white p-2 rounded-lg border">
+                        <div className="flex-1 truncate mr-2">{item.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">₹{item.rate.toLocaleString()}</span>
+                          <span className="text-gray-500">× {item.quantity}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-xs ${item.tax_percentage > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {item.tax_percentage}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {result.purchaseRequestData?.items && result.purchaseRequestData.items.length > 5 && (
+                      <p className="text-xs text-gray-500 text-center pt-1">
+                        + {result.purchaseRequestData.items.length - 5} more items
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Purchase Request Toggle */}
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span className="text-sm font-bold text-gray-700">Purchase Request</span>
+                {aiExtractionSummary.itemsExtracted > 0 && (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                    {aiExtractionSummary.itemsExtracted} items auto-extracted
+                  </span>
+                )}
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showPurchaseSection}
+                  onChange={(e) => setShowPurchaseSection(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+            <p className="text-xs text-gray-600 mb-3">
+              {showPurchaseSection 
+                ? "Purchase request will be created with vendor"
+                : "Only vendor will be created"}
+            </p>
+            {showPurchaseSection && (
+              <div className="flex gap-2">
+                <button
+                  onClick={addPurchaseItem}
+                  className="flex-1 text-xs bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Item
+                </button>
+                {purchaseRequestData.items.length > 0 && (
+                  <button
+                    onClick={clearAllItems}
+                    className="text-xs bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+            <h4 className="text-xs font-bold text-gray-700 mb-3 uppercase">Quick Actions</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={copyJSON}
+                className="text-xs bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Copy Data
+              </button>
+              <button
+                onClick={loadSampleItems}
+                className="text-xs bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Sample Items
+              </button>
+            </div>
           </div>
         </div>
 
@@ -882,16 +1013,16 @@ const handleSubmit = async () => {
                     </span>
                   )}
                 </div>
-                {/* <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-blue-600">
                     Total: ₹{calculateGrandTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
-                </div> */}
+                </div>
               </div>
 
               <div className="p-6 space-y-6">
                 {/* Purchase Request Settings */}
-                {/* <Section title="Purchase Request Settings">
+                <Section title="Purchase Request Settings">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Purchase Order Type</label>
@@ -1003,7 +1134,7 @@ const handleSubmit = async () => {
                       placeholder="Additional notes"
                     />
                   </div>
-                </Section> */}
+                </Section>
 
                 {/* Purchase Items */}
                 <Section title={`Purchase Items (${purchaseRequestData.items.length})`}>
@@ -1041,16 +1172,16 @@ const handleSubmit = async () => {
                               <h5 className="text-sm font-bold text-gray-700">
                                 {item.name || `Item ${index + 1}`}
                               </h5>
-                              {/* {item.sku && (
+                              {item.sku && (
                                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
                                   SKU: {item.sku}
                                 </span>
-                              )} */}
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
-                              {/* <span className="text-sm font-bold text-green-600">
+                              <span className="text-sm font-bold text-green-600">
                                 ₹{calculateItemTotal(item).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </span> */}
+                              </span>
                               {purchaseRequestData.items.length > 1 && (
                                 <button
                                   type="button"
@@ -1078,7 +1209,7 @@ const handleSubmit = async () => {
                                 required
                               />
                             </div>
-                            {/* <div className="space-y-1.5">
+                            <div className="space-y-1.5">
                               <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">SKU</label>
                               <input
                                 type="text"
@@ -1087,8 +1218,8 @@ const handleSubmit = async () => {
                                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                 placeholder="Enter SKU"
                               />
-                            </div> */}
-                            {/* <div className="space-y-1.5">
+                            </div>
+                            <div className="space-y-1.5">
                               <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Unit</label>
                               <select
                                 value={item.unit}
@@ -1097,7 +1228,7 @@ const handleSubmit = async () => {
                               >
                                 {UNIT_OPTIONS.map(unit => <option key={unit} value={unit}>{unit}</option>)}
                               </select>
-                            </div> */}
+                            </div>
                             <div className="space-y-1.5">
                               <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">Quantity *</label>
                               <input
@@ -1137,7 +1268,7 @@ const handleSubmit = async () => {
                                   className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                   placeholder="Enter tax percentage"
                                 />
-                                {/* <div className="flex gap-1">
+                                <div className="flex gap-1">
                                   {TAX_RATES.map(rate => (
                                     <button
                                       key={rate}
@@ -1148,10 +1279,10 @@ const handleSubmit = async () => {
                                       {rate}%
                                     </button>
                                   ))}
-                                </div> */}
+                                </div>
                               </div>
                             </div>
-                            {/* <div className="space-y-1.5">
+                            <div className="space-y-1.5">
                               <label className="text-[10px] font-bold text-gray-600 ml-1 uppercase tracking-tighter">HSN/SAC Code</label>
                               <input
                                 type="text"
@@ -1160,7 +1291,7 @@ const handleSubmit = async () => {
                                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 font-medium outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                 placeholder="Enter HSN/SAC code"
                               />
-                            </div> */}
+                            </div>
                           </div>
                           
                           <div className="space-y-1.5">
@@ -1212,7 +1343,7 @@ const handleSubmit = async () => {
                       </button>
 
                       {/* Grand Total Summary */}
-                      {/* {purchaseRequestData.items.length > 0 && (
+                      {purchaseRequestData.items.length > 0 && (
                         <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mt-6">
                           <h5 className="text-sm font-bold text-gray-700 mb-4">Purchase Request Summary</h5>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -1245,7 +1376,7 @@ const handleSubmit = async () => {
                             </div>
                           </div>
                         </div>
-                      )} */}
+                      )}
                     </div>
                   )}
                 </Section>
@@ -1285,11 +1416,11 @@ const handleSubmit = async () => {
                     ? showPurchaseSection ? 'Update Vendor & Create Purchase Request' : 'Update Vendor'
                     : showPurchaseSection ? 'Create Vendor & Purchase Request' : 'Create Vendor in System'
                   }
-                  {/* {showPurchaseSection && purchaseRequestData.items.length > 0 && (
+                  {showPurchaseSection && purchaseRequestData.items.length > 0 && (
                     <span className="text-sm bg-white/20 px-3 py-1 rounded-lg">
                       ₹{calculateGrandTotal().toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </span>
-                  )} */}
+                  )}
                 </>
               )}
             </button>
