@@ -17,7 +17,7 @@ let encryptedKey = "";
 // ================================
 export async function loadVendorEncryptedKey() {
   const res = await axios.get(
-    "http://localhost:5000/config/encrypted-key"
+    "https://elec-zoho-backend-snowy.vercel.app/config/encrypted-key"
   );
   encryptedKey = res.data.encryptedKey;
   console.log("🔐 Vendor Encrypted key loaded:", encryptedKey);
